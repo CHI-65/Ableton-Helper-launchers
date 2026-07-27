@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.0</title><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.1</title><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.0</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><a id="instBtn" href="https://chi-65.github.io/Ableton-Helper-launchers/app/" target="_blank" style="min-height:36px;font-size:13px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid #8886;border-radius:10px;color:inherit;text-decoration:none">Install icon</a></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.1</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><a id="instBtn" href="https://chi-65.github.io/Ableton-Helper-launchers/app/" target="_blank" style="min-height:36px;font-size:13px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid #8886;border-radius:10px;color:inherit;text-decoration:none">Install icon</a></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -93,6 +93,7 @@
   <h2 id="sepName" tabindex="-1">Split into stems</h2>
   <p class="sub">The sample is sent off for separation. Its stems show up in the sample list when ready (usually a few minutes) — keep working meanwhile.</p>
   <p class="sub" id="sepLink" role="status">checking the Dropbox link…</p>
+  <div class="row" id="sepConnRow" hidden><button class="big" id="sepConn" style="background:#0061fe;color:#fff;border-color:#0061fe">Connect Dropbox (one time)</button></div>
   <div class="row"><button class="big on" id="sep4">4 stems — drums, bass, other, vocals</button></div>
   <div class="row"><button class="big" id="sep6">6 stems — adds guitar &amp; piano</button></div>
   <div class="row"><button id="sepCancel">Cancel</button></div>
@@ -603,7 +604,10 @@ function sepErrMsg(e){ const c=e&&e.code;
   if(c==="not_granted"||c==="capability_disabled"||c==="capability_removed")return "This view can't reach Dropbox — use the copied request in chat instead.";
   if(c==="tool_error")return "Dropbox said no: "+((e&&e.message)||"unknown error");
   return "Couldn't reach Dropbox ("+(c||"error")+")."; }
-function wavB64(buf){ const nch=Math.min(2,buf.numberOfChannels), n=buf.length, sr=buf.sampleRate;
+function wavB64(buf){ const u=new Uint8Array(wavBytes(buf)); let s=""; const CH=32768;
+  for(let i=0;i<u.length;i+=CH) s+=String.fromCharCode.apply(null,u.subarray(i,i+CH));
+  return btoa(s); }
+function wavBytes(buf){ const nch=Math.min(2,buf.numberOfChannels), n=buf.length, sr=buf.sampleRate;
   const bytes=44+n*nch*2, ab=new ArrayBuffer(bytes), dv=new DataView(ab);
   const W=(o,s)=>{ for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i)); };
   W(0,"RIFF"); dv.setUint32(4,bytes-8,true); W(8,"WAVEfmt "); dv.setUint32(16,16,true);
@@ -612,9 +616,50 @@ function wavB64(buf){ const nch=Math.min(2,buf.numberOfChannels), n=buf.length, 
   W(36,"data"); dv.setUint32(40,n*nch*2,true);
   const chs=[]; for(let c=0;c<nch;c++)chs.push(buf.getChannelData(c));
   let o=44; for(let i=0;i<n;i++)for(let c=0;c<nch;c++){ const v=Math.max(-1,Math.min(1,chs[c][i])); dv.setInt16(o,v*32767,true); o+=2; }
-  let s=""; const u=new Uint8Array(ab), CH=32768;
-  for(let i=0;i<u.length;i+=CH) s+=String.fromCharCode.apply(null,u.subarray(i,i+CH));
-  return btoa(s); }
+  return ab; }
+// ---- direct Dropbox API (hosted twin; OAuth2 PKCE, key = CHM Sample Loader) ----
+const DBX_KEY="ssl6hh4v7kyv5qi", DAXKEY="sampleLoader.dbx";
+function daxState(){ try{ return JSON.parse(localStorage.getItem(DAXKEY)||"null"); }catch(e){ return null; } }
+function daxSave(s){ try{ if(s)localStorage.setItem(DAXKEY,JSON.stringify(s)); else localStorage.removeItem(DAXKEY); }catch(e){} }
+function b64url(buf){ const u=new Uint8Array(buf); let s=""; for(let i=0;i<u.length;i++)s+=String.fromCharCode(u[i]);
+  return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }
+async function daxConnect(){ const v=b64url(crypto.getRandomValues(new Uint8Array(48)).buffer);
+  const ch=b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));
+  try{ localStorage.setItem("sampleLoader.pkce",v); }catch(e){}
+  location.href="https://www.dropbox.com/oauth2/authorize?client_id="+DBX_KEY+
+    "&response_type=code&token_access_type=offline&code_challenge_method=S256&code_challenge="+ch+
+    "&redirect_uri="+encodeURIComponent(location.origin+location.pathname); }
+async function daxToken(){ const s=daxState(); if(!s||!s.refresh)return null;
+  if(s.access&&s.exp&&Date.now()<s.exp-60000)return s.access;
+  const r=await fetch("https://api.dropboxapi.com/oauth2/token",{method:"POST",
+    body:new URLSearchParams({grant_type:"refresh_token",refresh_token:s.refresh,client_id:DBX_KEY})});
+  if(!r.ok){ if(r.status===400||r.status===401)daxSave(null); throw new Error("dropbox refresh "+r.status); }
+  const j=await r.json(); s.access=j.access_token; s.exp=Date.now()+(j.expires_in||14400)*1000; daxSave(s); return s.access; }
+async function daxBoot(){ const q=new URLSearchParams(location.search); const code=q.get("code"); if(!code)return;
+  const v=localStorage.getItem("sampleLoader.pkce")||"";
+  try{ const r=await fetch("https://api.dropboxapi.com/oauth2/token",{method:"POST",
+      body:new URLSearchParams({code:code,grant_type:"authorization_code",code_verifier:v,client_id:DBX_KEY,
+        redirect_uri:location.origin+location.pathname})});
+    if(r.ok){ const j=await r.json();
+      daxSave({refresh:j.refresh_token,access:j.access_token,exp:Date.now()+(j.expires_in||14400)*1000});
+      say("Dropbox connected — stem separation is now automatic in this app.",true); sepWatch(); }
+    else say("Dropbox connect failed ("+r.status+") — tell Claude.",true);
+  }catch(e){ say("Dropbox connect failed — tell Claude.",true); }
+  try{ history.replaceState(null,"",location.pathname); }catch(e){} }
+async function daxRpc(fn,arg){ const t=await daxToken(); if(!t)throw new Error("no dropbox");
+  const r=await fetch("https://api.dropboxapi.com/2/"+fn,{method:"POST",
+    headers:{Authorization:"Bearer "+t,"Content-Type":"application/json"},body:JSON.stringify(arg)});
+  if(!r.ok)throw new Error(fn+" "+r.status); return r.json(); }
+async function daxUp(path,data){ const t=await daxToken(); if(!t)throw new Error("no dropbox");
+  const r=await fetch("https://content.dropboxapi.com/2/files/upload",{method:"POST",
+    headers:{Authorization:"Bearer "+t,"Content-Type":"application/octet-stream",
+      "Dropbox-API-Arg":JSON.stringify({path:path,mode:"overwrite",mute:true})},body:data});
+  if(!r.ok)throw new Error("upload "+r.status); return r.json(); }
+async function daxDown(path){ const t=await daxToken(); if(!t)throw new Error("no dropbox");
+  const r=await fetch("https://content.dropboxapi.com/2/files/download",{method:"POST",
+    headers:{Authorization:"Bearer "+t,"Dropbox-API-Arg":JSON.stringify({path:path})}});
+  if(!r.ok)throw new Error("download "+r.status); return r.text(); }
+let daxPoll=null;
 function renderSepStatus(){ let el=$("sepStatus"); const ids=Object.keys(sepState.pending);
   if(!el){ el=document.createElement("p"); el.id="sepStatus"; el.className="sub"; el.setAttribute("aria-live","polite"); $("list").parentNode.insertBefore(el,$("list")); }
   el.textContent=ids.length?("⚡ separating: "+ids.map(i=>sepState.pending[i].name).join(", ")+" … stems appear in the list when ready"):"";
@@ -623,38 +668,51 @@ function renderSepStatus(){ let el=$("sepStatus"); const ids=Object.keys(sepStat
 async function requestSep(i,model){ const s=SAMPLES[i]; if(!s)return;
   const id=Date.now().toString(36)+"-"+(s.name||"smp").replace(/[^A-Za-z0-9]+/g,"_").slice(0,30);
   const req={v:1,id,name:s.name,file:s.file,model,bpm:s.bpm||null,dur:s.dur,kind:s.uploaded?"upload":"library"};
-  let ok=null;
-  try{ ok=await Promise.race([dbxInit(), new Promise(r=>setTimeout(()=>r("timeout"),8000))]); }catch(e){ ok=false; }
-  if(ok==="timeout"){ const ch=$("sepChip"); if(ch)ch.hidden=true;
-    alert("Dropbox needs a one-time approval before the app can send this.\n\nLook for an Allow / Approve prompt near the top of the screen (claude.ai asks once). After allowing, tap Split into stems again.");
-    say("Waiting on a one-time Dropbox approval — allow it, then try again.",true); return; }
-  if(!ok){ const line="STEM-SEP "+JSON.stringify(req); try{ await navigator.clipboard.writeText(line); }catch(e){}
+  let tr=null;
+  if(window.claude&&window.claude.mcp){ let ok=null;
+    try{ ok=await Promise.race([dbxInit(), new Promise(r=>setTimeout(()=>r("timeout"),8000))]); }catch(e){ ok=false; }
+    if(ok==="timeout"){ const ch=$("sepChip"); if(ch)ch.hidden=true;
+      alert("Dropbox needs a one-time approval before the app can send this.\n\nLook for an Allow / Approve prompt near the top of the screen (claude.ai asks once). After allowing, tap Split into stems again.");
+      say("Waiting on a one-time Dropbox approval — allow it, then try again.",true); return; }
+    if(ok)tr="mcp"; }
+  if(!tr&&daxState()){ try{ await daxToken(); tr="api"; }catch(e){} }
+  if(!tr){ const line="STEM-SEP "+JSON.stringify(req); try{ await navigator.clipboard.writeText(line); }catch(e){}
     $("capout").value=line; const ch=$("sepChip"); if(ch)ch.hidden=true;
-    alert("This view has no direct Dropbox link. The request was copied — paste it to Claude in the chat"+(s.uploaded?" and drop the audio file there too.":"."));
-    say("Request copied for chat. "+ (s.uploaded?"Also drop the audio file in the chat.":""),true); return; }
+    alert("Dropbox isn't connected in this app yet.\n\nEither tap Split into stems again and use the blue Connect Dropbox button (one time), or paste the copied request to Claude in the chat"+(s.uploaded?" and drop the audio file there too.":"."));
+    say("Not connected — use Connect Dropbox in the split window, or paste the copied request to Claude.",true); return; }
   say("Sending "+s.name+" for separation…");
   try{
     if(s.uploaded){ const buf=await getBuf(i);
       if(buf.duration>240){ say("That upload is over 4 minutes — too big to send from here. Paste the request to Claude instead."); return; }
-      const b64=wavB64(buf), CH=1800000, parts=Math.ceil(b64.length/CH);
-      for(let p=0;p<parts;p++){ await dbxCall("create",{path:SEP_DIR+"/req-"+id+".wav.b64."+(p+1)+"of"+parts,content:b64.slice(p*CH,(p+1)*CH)}); say("Uploading audio "+(p+1)+" of "+parts+"…"); }
-      req.audio="req-"+id+".wav.b64"; req.parts=parts; }
-    await dbxCall("create",{path:SEP_DIR+"/req-"+id+".json",content:JSON.stringify(req)});
+      if(tr==="api"){ say("Uploading audio…"); await daxUp(SEP_DIR+"/req-"+id+".wav", wavBytes(buf)); req.audio="req-"+id+".wav"; req.parts=0; }
+      else { const b64=wavB64(buf), CH=1800000, parts=Math.ceil(b64.length/CH);
+        for(let p=0;p<parts;p++){ await dbxCall("create",{path:SEP_DIR+"/req-"+id+".wav.b64."+(p+1)+"of"+parts,content:b64.slice(p*CH,(p+1)*CH)}); say("Uploading audio "+(p+1)+" of "+parts+"…"); } 
+        req.audio="req-"+id+".wav.b64"; req.parts=parts; } }
+    if(tr==="api") await daxUp(SEP_DIR+"/req-"+id+".json", JSON.stringify(req));
+    else await dbxCall("create",{path:SEP_DIR+"/req-"+id+".json",content:JSON.stringify(req)});
     sepState.pending[id]={name:s.name,file:s.file,model,bpm:s.bpm||null}; sepSave(); renderSepStatus(); sepWatch();
     say("Stem separation requested for "+s.name+". Stems will appear in the sample list when ready.",true);
   }catch(e){ const ch=$("sepChip"); if(ch)ch.hidden=true; alert(sepErrMsg(e)); say(sepErrMsg(e),true); } }
-function sepWatch(){ if(sepWatchOff)return; if(!Object.keys(sepState.pending).length)return; if(!DBX||!(window.claude&&window.claude.mcp))return;
-  sepWatchOff=window.claude.mcp.watchTool(DBX,dbxName.list,{path:SEP_DIR,recursive:false},ev=>{
-    if(ev.type==="error"){ const c=ev.error&&ev.error.code; if(c==="needs_reauth"||c==="server_not_connected")say(sepErrMsg(ev.error)); return; }
-    const p=payloadOf(ev.result)||{}; const names=((p.entries)||[]).map(e=>e.name);
-    for(const id of Object.keys(sepState.pending)) if(names.indexOf("res-"+id+".json")>=0){
-      sepState.ready[id]=sepState.pending[id]; delete sepState.pending[id]; sepSave(); renderSepStatus(); ingestSep(id); }
-  },{refetchInterval:30000}); }
+function sepHit(names){ for(const id of Object.keys(sepState.pending)) if(names.indexOf("res-"+id+".json")>=0){
+    sepState.ready[id]=sepState.pending[id]; delete sepState.pending[id]; sepSave(); renderSepStatus(); ingestSep(id); } }
+function sepWatch(){ if(!Object.keys(sepState.pending).length)return;
+  if(!sepWatchOff && DBX && window.claude && window.claude.mcp){
+    sepWatchOff=window.claude.mcp.watchTool(DBX,dbxName.list,{path:SEP_DIR,recursive:false},ev=>{
+      if(ev.type==="error"){ const c=ev.error&&ev.error.code; if(c==="needs_reauth"||c==="server_not_connected")say(sepErrMsg(ev.error)); return; }
+      const p=payloadOf(ev.result)||{}; sepHit(((p.entries)||[]).map(e=>e.name));
+    },{refetchInterval:30000}); return; }
+  if(!daxPoll && daxState()){
+    const tick=async()=>{ if(!Object.keys(sepState.pending).length){ clearInterval(daxPoll); daxPoll=null; return; }
+      try{ const r=await daxRpc("files/list_folder",{path:SEP_DIR}); sepHit((r.entries||[]).map(e=>e.name)); }catch(e){} };
+    daxPoll=setInterval(tick,30000); tick(); } }
 async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id);
   const pen=sepState.ready[id]; if(!pen)return;
-  try{ const man=asJson(await dbxCall("fetch",{id:SEP_DIR+"/res-"+id+".json"}));
+  const grab = (DBX&&window.claude&&window.claude.mcp)
+    ? (async n=>asJson(await dbxCall("fetch",{id:SEP_DIR+"/"+n})))
+    : (async n=>JSON.parse(await daxDown(SEP_DIR+"/"+n)));
+  try{ const man=await grab("res-"+id+".json");
     ensureAudio(); let added=0;
-    for(const st of (man&&man.stems)||[]){ const pj=asJson(await dbxCall("fetch",{id:SEP_DIR+"/"+st.json}));
+    for(const st of (man&&man.stems)||[]){ const pj=await grab(st.json);
       let buf; try{ buf=await AC.decodeAudioData(b64buf(pj.b64)); }catch(e){ continue; }
       SAMPLES.push({file:st.file,name:pen.name+" · "+st.role,dur:+buf.duration.toFixed(3),frames:buf.length,
         bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name}); added++; }
@@ -668,10 +726,14 @@ $("dlgSep").onclick=()=>{ const s=SAMPLES[dlgIdx]; if(!s)return; stopPrev();
   $("sepName").textContent="Split "+s.name+" into stems: choose 4 or 6 stems";
   $("dlg").hidden=true; $("sepDlg").hidden=false;
   setTimeout(()=>{ try{$("sepName").focus();}catch(e){} },60);
-  $("sepLink").textContent="checking the Dropbox link…";
-  dbxInit().then(ok=>{ $("sepLink").textContent= ok
-    ? "Dropbox link ready — stems come back into this list on their own."
-    : "No direct Dropbox link in this view — the request will be copied for you to paste to Claude instead."; }); };
+  $("sepLink").textContent="checking the Dropbox link…"; $("sepConnRow").hidden=true;
+  (async()=>{ if(window.claude&&window.claude.mcp&&await dbxInit()){
+      $("sepLink").textContent="Dropbox link ready — stems come back into this list on their own."; return; }
+    if(daxState()){ try{ await daxToken(); $("sepLink").textContent="Dropbox connected — stems come back into this list on their own."; return; }catch(e){} }
+    if(window.crypto&&crypto.subtle){ $("sepConnRow").hidden=false;
+      $("sepLink").textContent="One-time setup available: tap Connect Dropbox and approve, then splits run automatically. Otherwise the request is copied for Claude."; }
+    else $("sepLink").textContent="No Dropbox link here — the request will be copied for you to paste to Claude."; })(); };
+$("sepConn").onclick=()=>{ say("Opening Dropbox to approve the connection…"); daxConnect(); };
 function sepGo(model){ $("sepDlg").hidden=true; const s=SAMPLES[dlgIdx];
   const ch=$("sepChip"); if(ch){ ch.hidden=false; ch.textContent="⚡ requesting…"; }
   say("Requesting stem separation for "+((s||{}).name||"sample")+" — one moment…",true);
@@ -681,7 +743,10 @@ $("sep4").onclick=()=>sepGo("htdemucs_ft");
 $("sep6").onclick=()=>sepGo("htdemucs_6s");
 $("sepCancel").onclick=()=>{ $("sepDlg").hidden=true; };
 renderSepStatus();
-dbxInit().then(ok=>{ if(!ok)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch(); });
+daxBoot().then(()=>{ (async()=>{ let any=false;
+  if(window.claude&&window.claude.mcp&&await dbxInit())any=true;
+  else if(daxState()){ try{ await daxToken(); any=true; }catch(e){} }
+  if(!any)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch(); })(); });
 
 // ---- persistent memory (localStorage): survive an accidental tap-out / reload ----
 const LSKEY="sampleLoader.v1"; let saveTimer=null, restoring=false;
@@ -706,5 +771,5 @@ function restoreState(){ let st; try{ st=JSON.parse(localStorage.getItem(LSKEY)|
 window.addEventListener("pagehide",saveState); window.addEventListener("beforeunload",saveState);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
-renderList(); restoreState(); say("Sample Loader v3.0 ready.");
+renderList(); restoreState(); say("Sample Loader v3.1 ready.");
 </script>

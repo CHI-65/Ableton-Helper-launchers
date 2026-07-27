@@ -6,9 +6,22 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Stem Mixer">
 <link rel="apple-touch-icon" sizes="180x180" href="../assets/stem_mixer_icon.png">
-<style>body{margin:0;background:#0d0d10;color:#eee;font:17px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh}</style>
+<style>
+ body{margin:0;background:#0d0d10;color:#eee;font:19px/1.5 -apple-system,sans-serif;
+   display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;box-sizing:border-box}
+ img{width:120px;height:120px;border-radius:26px;margin-bottom:18px}
+ a.go{display:inline-block;margin-top:22px;background:#f90;color:#111;font-weight:700;
+   padding:14px 26px;border-radius:12px;text-decoration:none;font-size:18px}
+ .steps{color:#aaa;font-size:16px;max-width:420px}
+</style>
 </head><body>
-<p id="m">Opening Stem Mixer…</p>
-<script>location.replace("https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596");</script>
-<noscript><a href="https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596" style="color:#f90">Open Stem Mixer</a></noscript>
+<script>
+// From the Home Screen icon (standalone), go straight into the app.
+if(navigator.standalone===true){ location.replace("https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596"); }
+</script>
+<img src="../assets/stem_mixer_icon.png" alt="Stem Mixer icon">
+<h1 style="font-size:24px;margin:0 0 10px">Stem Mixer</h1>
+<p class="steps">To install: tap <b>Share</b>, then <b>Add to Home Screen</b>, then <b>Add</b>.<br>
+The icon opens the app full screen from now on.</p>
+<a class="go" href="https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596">Or open the app now →</a>
 </body></html>

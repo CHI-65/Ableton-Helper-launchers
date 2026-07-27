@@ -1,0 +1,710 @@
+<meta charset="utf-8"><title>Sample Loader v3.0</title><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<style>
+ :root{color-scheme:light dark} html,body{margin:0}
+ main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
+ h1{font-size:20px;margin:0} .sub{color:#888;font-size:13px;margin:4px 0 12px}
+ .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+ button{font:15px/1 inherit;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid #8886;background:#8881;color:inherit;cursor:pointer}
+ button:active{background:#8883} .on{background:#34c759;color:#fff;border-color:#34c759}
+ button:disabled{opacity:.45}
+ body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+ input,textarea,select,.out,[contenteditable="true"],.editing{-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default}
+ .editing{outline:2px solid #3a7afe;border-radius:5px;padding:0 4px;background:#3a7afe22}
+ .panel{border:1px solid #8884;border-radius:12px;padding:10px 12px;margin:10px 0}
+ .list{display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow:auto}
+ .item{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;background:#8881;border-radius:9px;padding:6px 8px}
+ .item .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .chip{font:11px ui-monospace,monospace;color:#fff;background:#3a7afe;border-radius:20px;padding:2px 8px}
+ .chip.no{background:#8887}
+ .sq{min-width:44px;padding:0 10px}
+ .slot{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:6px;align-items:center;background:#8881;border-radius:9px;padding:6px 8px;margin:4px 0}
+ .badge{font:11px ui-monospace,monospace;padding:2px 7px;border-radius:6px;background:#8883}
+ .badge.loop{background:#3a7afe;color:#fff} .badge.os{background:#af52de;color:#fff}
+ .editbtn{background:#ff9500;color:#111;font-weight:700;border:0;border-radius:8px;padding:0 12px;min-width:70px;cursor:pointer}
+ #committed .chip{display:inline-flex;align-items:center;gap:3px;margin:2px 3px}
+ .chipx{background:none;border:0;color:#fff;font-weight:700;cursor:pointer;font-size:15px;line-height:1;padding:0 2px}
+ #create{font-weight:700;background:#34c759;color:#fff;border-color:#34c759;flex:1}
+ #send{font-weight:700;background:#ff9500;color:#fff;border-color:#ff9500}
+ input[type=text],input[type=number]{font:15px inherit;padding:8px;border-radius:8px;border:1px solid #8886;background:#8881;color:inherit}
+ .out{width:100%;box-sizing:border-box;font:13px ui-monospace,monospace;padding:9px;border-radius:8px;border:1px solid #8886;background:#8881;color:inherit;-webkit-user-select:text;user-select:text}
+ .modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+ .modal[hidden]{display:none}
+ .card{background:Canvas;color:CanvasText;border:1px solid #8886;border-radius:14px;padding:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto}
+ #waveFS{position:fixed;inset:0;z-index:20;background:Canvas;color:CanvasText;display:flex;flex-direction:column;padding:8px;box-sizing:border-box}
+ #waveFS[hidden]{display:none}
+ #waveFSbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+ #waveFShost{flex:1;min-height:0;display:flex;align-items:stretch}
+ #waveStage{display:flex;gap:6px;align-items:stretch;margin:2px 0 4px}
+ #waveFShost #waveStage{flex:1;width:100%;margin:0}
+ #waveLeft{display:flex;flex-direction:column;gap:6px;position:sticky;top:6px;align-self:flex-start;z-index:2}
+ #waveLeft button{min-width:56px}
+ #waveClose{background:#ff453a;color:#fff;border-color:#ff453a;font-weight:700}
+ .card h2{font-size:17px;margin:0 0 8px} .big{flex:1;min-width:100px;font-weight:600}
+ .val{font:18px ui-monospace,monospace;font-weight:700}
+ select{font:15px inherit;padding:9px;border-radius:8px;border:1px solid #8886;background:Canvas;color:CanvasText}
+ .crow{display:grid;grid-template-columns:92px 92px 1fr;align-items:center;gap:8px;margin:7px 0}
+ .crow .lbl{color:#888;font-size:13px} .crow .val{font:15px ui-monospace,monospace;font-weight:700}
+ .crow .steps{display:flex;gap:5px;justify-content:flex-end;flex-wrap:wrap}
+ .crow select{justify-self:start;width:72px} .crow input[type=range]{grid-column:2/4;width:100%}
+ .crow .steps button{min-height:40px;padding:0 11px}
+</style>
+<main>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.0</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><a id="instBtn" href="https://chi-65.github.io/Ableton-Helper-launchers/app/" target="_blank" style="min-height:36px;font-size:13px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid #8886;border-radius:10px;color:inherit;text-decoration:none">Install icon</a></div>
+ <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
+ <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
+
+ <div class="row"><button id="audClk" class="on">Audition click: ON</button><button id="loopAud" class="on">Loop: ON</button><span class="sub">▶ plays with a click at the loop's BPM</span></div>
+ <div id="list" class="list" aria-label="Sample list"></div>
+
+ <div class="panel">
+   <div class="row"><b>Audition slots (up to 6)</b><span style="flex:1"></span>
+     <button id="playAll">▶ Play + Click</button>
+     <button id="clickBtn" class="on">Click: ON</button>
+     <button id="send" disabled>Send to session →</button></div>
+   <div class="row"><span class="sub" style="min-width:96px">Master tempo</span><button id="mtDown" title="master tempo down">◀</button><input type="number" id="masterBpm" min="40" max="300" step="1" placeholder="auto" style="width:88px;text-align:center"><button id="mtUp" title="master tempo up">▶</button><span class="sub">all loops warp to this so they play together</span></div>
+   <div class="row"><span class="sub" style="min-width:96px">Click volume</span><input type="range" id="clkVolR" min="0" max="100" value="100" style="flex:1;max-width:240px"></div>
+   <div id="slots"><p class="sub" id="slotsEmpty">no samples loaded — add some from the list above</p></div>
+ </div>
+
+ <div class="panel"><b>In session:</b> <span id="committed">nothing yet</span></div>
+
+ <div class="row">
+   <input type="text" id="sessName" value="New Sample Session" aria-label="Session name" style="flex:1;min-width:160px">
+   <button id="create" disabled>Create session</button></div>
+ <input class="out" id="capout" readonly aria-label="Build manifest" value="load samples, send to session, then Create">
+ <p class="sub" id="read" aria-live="polite"></p>
+</main>
+
+<!-- Accept / Edit dialog -->
+<div id="dlg" class="modal" hidden><div class="card">
+  <h2 id="dlgName">Sample</h2>
+  <div class="row"><button class="big" id="dlgAud">▶ Audition</button>
+    <button id="dlgType" class="big">Type: Loop</button></div>
+  <div class="row"><label for="dlgBpm">Tempo</label>
+    <input type="number" id="dlgBpm" min="40" max="240" step="0.01" style="width:110px"><span class="sub" id="dlgBpmSrc"></span></div>
+  <div class="row"><button class="big on" id="dlgEdit">Edit (crop)…</button>
+    <button class="big" id="dlgAccept">Accept →</button>
+    <button id="dlgCancel">Cancel</button></div>
+  <div class="row"><button class="big" id="dlgSep" style="background:#af52de;color:#fff;border-color:#af52de">⚡ Split into stems…</button></div>
+</div></div>
+
+<!-- Stem separation: model choice -->
+<div id="sepDlg" class="modal" hidden><div class="card" role="dialog" aria-modal="true" aria-labelledby="sepName">
+  <h2 id="sepName" tabindex="-1">Split into stems</h2>
+  <p class="sub">The sample is sent off for separation. Its stems show up in the sample list when ready (usually a few minutes) — keep working meanwhile.</p>
+  <p class="sub" id="sepLink" role="status">checking the Dropbox link…</p>
+  <div class="row"><button class="big on" id="sep4">4 stems — drums, bass, other, vocals</button></div>
+  <div class="row"><button class="big" id="sep6">6 stems — adds guitar &amp; piano</button></div>
+  <div class="row"><button id="sepCancel">Cancel</button></div>
+</div></div>
+
+<!-- Cropper -->
+<div id="crop" class="modal" hidden><div class="card">
+  <h2 id="cropName">Crop</h2>
+  <div class="row"><button class="big cplay">▶ Play</button><button id="cropLoop" class="on">Loop: A–B</button>
+    <button id="cropClk" class="on">Click: REL</button><span class="val" id="cropPos">0.00s</span></div>
+  <div class="crow" id="sensRow" style="display:none"><span class="lbl">Transient sens</span><input type="range" id="sens" min="0" max="100" value="35"><span id="sensN" class="sub">—</span></div>
+  <div class="crow"><span class="lbl">Bars A→B</span><select id="bars"><option>1</option><option selected>2</option><option>4</option><option>8</option></select><span class="sub" id="baseBpm" style="text-align:right">detected —</span></div>
+  <div class="crow"><span class="lbl">Tempo</span><span class="steps" style="grid-column:2/4;justify-content:flex-start;align-items:center"><button id="tempoDown" title="tempo down">◀</button><span class="val" id="cropBpm" title="long-press to type a tempo" style="min-width:118px;text-align:center">tempo —</span><button id="tempoUp" title="tempo up">▶</button><button id="tempoReset" title="reset to detected tempo">↺</button></span></div>
+
+  <div class="row" style="margin-top:6px"><button class="big cplay">▶ Play</button><button id="btnZone" title="zone mode: touch a shaded zone to move that marker, elsewhere above center = slip, below center = pan/zoom">▦ Zone</button>
+    <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
+  <div class="sub" id="waveHint" style="margin:0 0 3px">A/B/Slip on the left · none lit → pinch/zoom/move · or use Zone</div>
+  <div id="waveStage">
+    <div id="waveLeft"><button id="btnA" title="move downbeat A">A</button><button id="btnB" title="move loop-end B">B</button><button id="btnSlip" title="slip the sample under A–B" hidden>Slip</button></div>
+    <canvas id="wave" style="height:120px;border:1px solid #8884;border-radius:8px;touch-action:none;display:block;flex:1;min-width:0"></canvas>
+  </div>
+  <div class="crow"><span class="lbl" id="stepTarget">Zoom</span><span class="val" id="slipVal">—</span></div>
+  <div class="crow"><span class="lbl">Transpose</span><span class="val" id="transVal">0 st</span>
+    <span class="steps"><button id="trDown">− st</button><button id="trUp">+ st</button><button id="trReset">0</button><button id="btnStretch">Stretch: off</button><button id="btnRev" title="reverse the sample">⇄ Reverse</button></span></div>
+  <div class="row" style="margin-top:16px;border-top:1px solid #8883;padding-top:12px;justify-content:flex-start"><button id="undoBtn" class="big" style="min-width:150px;background:#8882">↶ Undo <b id="undoN">0</b>/4</button></div>
+  <div class="row"><button class="big on" id="cropDone">Done</button><button id="cropCancel">Cancel</button></div>
+</div></div>
+
+<!-- Full-screen waveform pop-out (the #wave canvas is moved in here, then back) -->
+<div id="waveFS" hidden>
+  <div id="waveFSbar">
+    <button class="big cplay">▶ Play</button>
+    <button id="fsZone" title="zone mode">▦ Zone</button>
+    <button id="fsTrans" title="transient snap">⌁ Snap</button>
+    <button id="fsUndo" class="big">↶ Undo</button>
+    <span class="val" id="fsInfo" style="flex:1;text-align:center;font-size:14px">—</span>
+    <button id="waveClose" class="big">✕ Close</button>
+  </div>
+  <div id="waveFShost"></div>
+</div>
+
+<!-- Re-edit dialog -->
+<div id="reDlg" class="modal" hidden><div class="card">
+  <h2>Re-edit sample</h2>
+  <p class="sub">Edit this loop again, or make a copy so you keep both the original edit and a new one.</p>
+  <div class="row"><button class="big on" id="reEdit">Edit original</button><button class="big" id="reCopy">Copy &amp; edit</button><button id="reCancel">Cancel</button></div>
+</div></div>
+
+<!-- Set session tempo -->
+<div id="tempoDlg" class="modal" hidden><div class="card">
+  <h2>Set session tempo</h2>
+  <p class="sub">Several tempos are in play. Pick the master — everything warps to it.</p>
+  <div class="row"><select id="tempoSel"></select> BPM</div>
+  <div class="row"><button class="big on" id="tempoOk">Build →</button><button id="tempoCancel">Cancel</button></div>
+</div></div>
+
+<audio id="sil" preload="auto"></audio>
+<script>
+const SAMPLES=[], STEMURL="https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596";
+const $=id=>document.getElementById(id);
+let AC=null, sil=null, bufCache={}, prevSrc=null, prevIdx=-1;
+let slots=[], committed=[], clickOn=true, playing=false, t0=0, clkTimer=null, clkTempo=120, clkRef=0, clkVol=1;
+$("cnt").textContent=SAMPLES.length+" samples";
+
+function ensureAudio(){ if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended")AC.resume();
+  if(!sil){sil=$("sil");sil.loop=true;sil.setAttribute("playsinline","");sil.src="data:audio/wav;base64,UklGRqQMAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";} sil.play().catch(()=>{}); }
+function b64buf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
+async function getBuf(i){ if(SAMPLES[i]._buf)return SAMPLES[i]._buf; if(bufCache[i])return bufCache[i]; const b=await AC.decodeAudioData(b64buf(SAMPLES[i].b64)); bufCache[i]=b; return b; }
+// ---- add a file straight from the device (Photos / Files) ----
+function bpmFromName(n){ for(const p of [/(\d{2,3})\s*bpm/i,/[\s_\-](\d{2,3})[\s_\-]/,/\b(\d{2,3})\b/]){ const m=n.match(p); if(m){ const v=+m[1]; if(v>=60&&v<=200)return v; } } return null; }
+function calcPeaks(buf,N=600){ const ch=buf.getChannelData(0),n=ch.length,out=[],step=n/N; for(let i=0;i<N;i++){ let mx=0; const a=Math.floor(i*step),b=Math.min(n,Math.floor((i+1)*step)); for(let j=a;j<b;j++){const v=Math.abs(ch[j]); if(v>mx)mx=v;} out.push(Math.min(100,Math.round(mx*100))); } return out; }
+function calcOnsets(buf){ const ch=buf.getChannelData(0),sr=buf.sampleRate,W=1024,H=512,frames=Math.floor((ch.length-W)/H); if(frames<3)return [];
+  const rms=new Float32Array(frames); for(let f=0;f<frames;f++){ let s=0; const a=f*H; for(let j=0;j<W;j++){const v=ch[a+j]; s+=v*v;} rms[f]=Math.sqrt(s/W); }
+  let mx=0; const fl=new Float32Array(frames); for(let f=1;f<frames;f++){ fl[f]=Math.max(0,rms[f]-rms[f-1]); if(fl[f]>mx)mx=fl[f]; } if(mx<=0)return [];
+  const out=[]; let last=-1e9; for(let f=1;f<frames-1;f++){ if(fl[f]>=fl[f-1]&&fl[f]>=fl[f+1]&&fl[f]>0.15*mx){ const t=f*H/sr; if(t-last>0.04){ out.push([+t.toFixed(3),+(fl[f]/mx).toFixed(3)]); last=t; } } } return out; }
+const AUDIO_RX=/\.(wav|mp3|m4a|aif|aiff|flac|ogg|mov|mp4|m4v|webm)$/i;
+async function decodeAndAdd(file){ ensureAudio(); if(!AUDIO_RX.test(file.name))return -1;   // skip non-audio (e.g. other files in a folder)
+  const name=file.name.replace(/\.[^.]+$/,""); let buf;
+  try{ buf=await AC.decodeAudioData(await file.arrayBuffer()); }catch(e){ return -2; }        // couldn't decode in-browser
+  const s={file:file.name,name,dur:+buf.duration.toFixed(3),frames:buf.length,bpm:bpmFromName(file.name),onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true};
+  SAMPLES.push(s); return SAMPLES.length-1; }
+async function addFiles(fileList,opts){ let files=[...(fileList||[])].filter(f=>AUDIO_RX.test(f.name)); if(!files.length){ alert("No audio files found there."); return; }
+  const LIMIT=60; if(files.length>LIMIT){ alert("That has "+files.length+" audio files — loading the first "+LIMIT+"; add the rest later."); files=files.slice(0,LIMIT); }
+  let added=0,failed=0,lastIdx=-1;
+  for(const f of files){ const r=await decodeAndAdd(f); if(r>=0){added++;lastIdx=r;} else if(r===-2)failed++; }
+  $("cnt").textContent=SAMPLES.length+" samples"; renderList();
+  if(added===1 && opts&&opts.dialogIfSingle) openDialog(lastIdx);
+  else if(added>=1){ if($("read"))$("read").textContent=added+" sample"+(added>1?"s":"")+" added"+(failed?" · "+failed+" couldn’t be read (try the chat for those)":""); }
+  else alert("Couldn’t read any of those as audio in the browser"+(failed?" ("+failed+" failed)":"")+". For screen recordings that fail, drop them into the chat."); }
+$("addFile").onclick=()=>$("fileIn").click();
+$("fileIn").onchange=e=>{ addFiles(e.target.files,{dialogIfSingle:true}); e.target.value=""; };
+$("addFolder").onclick=()=>$("folderIn").click();
+$("folderIn").onchange=e=>{ addFiles(e.target.files,{dialogIfSingle:false}); e.target.value=""; };
+
+// ---- sample list ----
+function renderList(){ const L=$("list"); L.innerHTML="";
+  SAMPLES.forEach((s,i)=>{ const d=document.createElement("div"); d.className="item";
+    d.innerHTML='<button class="sq aud" title="Audition">▶</button><span class="nm">'+s.name+'</span>'+
+      '<span class="chip'+(s.bpm?'':' no')+'">'+(s.bpm?s.bpm+' bpm':'no bpm')+'</span>'+
+      '<button class="sq add" title="Add">＋</button>';
+    d.querySelector(".aud").onclick=()=>auditionOne(i,d.querySelector(".aud"));
+    d.querySelector(".add").onclick=()=>openDialog(i);
+    L.appendChild(d); }); }
+let audTimer=null, audClickOn=true, loopAudOn=true;
+function startAudClick(tempo,ref){ if(audTimer)clearInterval(audTimer); if(!tempo)return; const beat=60/tempo; let k=0;
+  audTimer=setInterval(()=>{ if(!audClickOn||!AC)return; const now=AC.currentTime,hi=now+0.12;
+    while(ref+k*beat<hi){const w=ref+k*beat; if(w>now-0.02)beep(Math.max(now+0.004,w),k%4===0); k++;} },25); }
+function stopAudClick(){ if(audTimer){clearInterval(audTimer);audTimer=null;} }
+function stopPrev(){ if(prevSrc){try{prevSrc.stop();}catch(e){} prevSrc=null;} stopAudClick(); document.querySelectorAll(".aud").forEach(b=>b.textContent="▶"); }
+async function auditionOne(i,btn,bpmOverride){ ensureAudio(); if(prevIdx===i&&prevSrc){stopPrev();prevIdx=-1;return;} stopPrev();
+  const buf=await getBuf(i); const s=AC.createBufferSource(); s.buffer=buf; s.connect(AC.destination);
+  if(loopAudOn){ s.loop=true; s.loopStart=0; s.loopEnd=buf.duration; }
+  const when=AC.currentTime+0.06; s.start(when); prevSrc=s; prevIdx=i;
+  const bpm = (bpmOverride!=null && !isNaN(bpmOverride)) ? bpmOverride : SAMPLES[i].bpm;
+  if(audClickOn && bpm) startAudClick(bpm, when);
+  if(btn)btn.textContent="⏹"; s.onended=()=>{stopPrev();prevIdx=-1;}; }
+
+// ---- Accept / Edit dialog ----
+let dlgIdx=-1, dlgType="loop";
+function openDialog(i){ dlgIdx=i; const s=SAMPLES[i]; dlgType = "loop";
+  $("dlgName").textContent=s.name; $("dlgBpm").value = s.bpm || sessTempoGuess();
+  $("dlgBpmSrc").textContent = s.bpm? "from filename":"(no bpm in name)";
+  $("dlgType").textContent="Type: "+(dlgType==="loop"?"Loop":"One-shot");
+  $("dlgEdit").style.display = dlgType==="loop"?"":"none";
+  $("dlg").hidden=false; }
+$("dlgType").onclick=()=>{ dlgType=dlgType==="loop"?"oneshot":"loop"; $("dlgType").textContent="Type: "+(dlgType==="loop"?"Loop":"One-shot"); $("dlgEdit").style.display=dlgType==="loop"?"":"none"; };
+$("dlgAud").onclick=()=>auditionOne(dlgIdx,null,parseFloat($("dlgBpm").value));
+$("dlgCancel").onclick=()=>{ stopPrev(); $("dlg").hidden=true; };
+$("dlgAccept").onclick=()=>{ const s=SAMPLES[dlgIdx]; const k=addSlot(dlgIdx,dlgType,parseFloat($("dlgBpm").value)||120,{cin:0,cout:s.dur,downbeat:0}); stopPrev(); $("dlg").hidden=true; if(k>=0&&playing)addLoopLive(slots[k]); };
+$("dlgEdit").onclick=()=>{ const s=SAMPLES[dlgIdx]; const k=addSlot(dlgIdx,dlgType,parseFloat($("dlgBpm").value)||120,{cin:0,cout:s.dur,downbeat:0}); stopPrev(); $("dlg").hidden=true; if(k>=0)openCropper(k); };
+function sessTempoGuess(){ const t=allTempos(); return t.length? t[0]:120; }
+
+// ---- audition slots ----
+function addSlot(i,type,bpm,crop){ if(slots.length>=6){ alert("6 slots are full — Send to session to free them."); return -1; }
+  const s=SAMPLES[i]; slots.push({sidx:i,name:s.name,type,bpm,baseBpm:bpm,bpmManual:false,cin:crop.cin,cout:crop.cout,downbeat:crop.downbeat,slip:0,transpose:0,stretch:false,reverse:false,vol:0.9,solo:false,muted:false});
+  renderSlots(); return slots.length-1; }
+// long-press a name to rename the sample in place (only place text-select is allowed)
+function enableRename(el,obj){ if(!el)return; let t=null,edit=false;
+  const start=()=>{ if(edit)return; t=setTimeout(()=>{ t=null; el.contentEditable="true"; el.classList.add("editing"); edit=true; el.focus();
+      const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); },450); };
+  const cancel=()=>{ if(t){clearTimeout(t);t=null;} };
+  const finish=save=>{ if(!edit)return; edit=false; el.contentEditable="false"; el.classList.remove("editing"); getSelection().removeAllRanges();
+    const v=el.textContent.trim(); if(save&&v){ obj.name=v; el.textContent=v; } else el.textContent=obj.name; };
+  el.addEventListener("pointerdown",start); el.addEventListener("pointerup",cancel); el.addEventListener("pointermove",cancel); el.addEventListener("pointercancel",cancel);
+  el.addEventListener("blur",()=>finish(true));
+  el.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();el.blur();} else if(e.key==="Escape"){e.preventDefault();finish(false);} }); }
+function renderSlots(){ const box=$("slots"); box.innerHTML=""; if(!slots.length){ box.innerHTML='<p class="sub">no samples loaded — add some from the list above</p>'; }
+  slots.forEach((sl,k)=>{ const d=document.createElement("div"); d.className="slot";
+    d.innerHTML='<span class="badge '+(sl.type==="loop"?"loop":"os")+'">'+(hasMods(sl)?"✱ ":"")+(sl.type==="loop"?effTempo(sl).toFixed(0)+"bpm":"1-shot")+'</span>'+
+      '<span class="nm">'+sl.name+'</span>'+
+      '<button class="sq s">S</button><button class="sq m">M</button>'+
+      (sl.type==="loop"?'<button class="editbtn ed">✎ Edit</button>':'<span></span>')+
+      '<button class="sq rm">×</button>'+
+      '<label class="vrow" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:2px"><span class="sub" style="min-width:26px">Vol</span><input type="range" class="vol" min="0" max="100" value="'+Math.round((sl.vol==null?0.9:sl.vol)*100)+'" style="flex:1"></label>';
+    d.querySelector(".s").onclick=e=>{sl.solo=!sl.solo;e.target.classList.toggle("on",sl.solo);applyGains();};
+    d.querySelector(".m").onclick=e=>{sl.muted=!sl.muted;e.target.classList.toggle("on",sl.muted);applyGains();};
+    d.querySelector(".vol").oninput=e=>{ sl.vol=+e.target.value/100; applyGains(); saveSoon(); };
+    if(sl.type==="loop")d.querySelector(".ed").onclick=()=>openReDlg(k);
+    d.querySelector(".rm").onclick=()=>{ const rem=slots[k]; slots.splice(k,1);
+      const i=slotSrcs.findIndex(o=>o.sl===rem); if(i>=0){ try{slotSrcs[i].src.stop();}catch(e){} slotSrcs.splice(i,1); }   // stop just this loop, leave the rest playing
+      renderSlots(); if(playing&&!slotSrcs.length)stopAll(); else applyGains(); };
+    enableRename(d.querySelector(".nm"),sl);
+    box.appendChild(d); });
+  $("send").disabled=!slots.length; saveSoon(); }
+
+// ---- transport: play up to 4 slots looping + click ----
+let slotSrcs=[];
+function stopAll(){ slotSrcs.forEach(s=>{try{s.src.stop();}catch(e){}}); slotSrcs=[]; playing=false; if(clkTimer){clearInterval(clkTimer);clkTimer=null;} $("playAll").textContent="▶ Play + Click"; }
+function masterTempo(){ return parseFloat(($("masterBpm")||{}).value)||sessTempoNow(); }
+async function playAll(){ ensureAudio(); if(cropSrc)stopCrop(); stopAll(); if(!slots.length)return;
+  const master=masterTempo();
+  // PHASE 1 — do ALL decode/bake/stretch work first (it takes real time), so nothing delays the start
+  const prep=[];
+  for(const sl of slots){ if(!sl.renderBuf && hasMods(sl)){ try{ sl.renderBuf=await bakeRender(sl); }catch(e){} }
+    let buf,ls,le;
+    if(sl.renderBuf){ buf=sl.renderBuf; ls=0; le=sl.renderBuf.duration; }                // baked (tempo/transpose) version
+    else { buf=await getBuf(sl.sidx); const off=sl.slip||0;
+      ls=Math.max(0,Math.min(buf.duration-0.05,sl.cin+off)); le=Math.max(ls+0.05,Math.min(buf.duration,sl.cout+off)); }
+    if(sl.type==="loop" && master>0){ const f=effTempo(sl)/master; if(f>0&&Math.abs(f-1)>1e-3){ const sb=renderStretch(buf,ls,le,f); buf=sb; ls=0; le=sb.duration; } }
+    prep.push({sl,buf,ls,le}); }
+  // PHASE 2 — everything is ready; fix ONE start time and launch all sources + click together
+  t0=AC.currentTime+0.12; clkTempo=master; clkRef=t0;
+  for(const {sl,buf,ls,le} of prep){ const src=AC.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=ls; src.loopEnd=le;
+    const g=AC.createGain(); src.connect(g); g.connect(AC.destination); sl.gain=g;
+    src.start(t0, ls); slotSrcs.push({src,sl}); }
+  applyGains(); playing=true; $("playAll").textContent="⏹ Stop"; startClick(clkTempo);
+}
+// phase a newly-added loop into the running mix on the next bar boundary (no restart of the loops already playing)
+async function addLoopLive(sl){ if(!playing){ playAll(); return; } ensureAudio();
+  const master=clkTempo||masterTempo();   // match the tempo the mix is ALREADY playing at (auto-master would otherwise shift when a loop is added)
+  if(!sl.renderBuf && hasMods(sl)){ try{ sl.renderBuf=await bakeRender(sl); }catch(e){} }
+  let buf,ls,le;
+  if(sl.renderBuf){ buf=sl.renderBuf; ls=0; le=sl.renderBuf.duration; }
+  else { buf=await getBuf(sl.sidx); const off=sl.slip||0; ls=Math.max(0,Math.min(buf.duration-0.05,sl.cin+off)); le=Math.max(ls+0.05,Math.min(buf.duration,sl.cout+off)); }
+  if(sl.type==="loop" && master>0){ const f=effTempo(sl)/master; if(f>0&&Math.abs(f-1)>1e-3){ const sb=renderStretch(buf,ls,le,f); buf=sb; ls=0; le=sb.duration; } }
+  const bar=4*(60/master), now=AC.currentTime;                          // next bar on the master grid (clkRef)
+  let startAt=clkRef+Math.ceil((now-clkRef)/bar)*bar; if(startAt<now+0.06)startAt+=bar;
+  const src=AC.createBufferSource(); src.buffer=buf; src.loop=true; src.loopStart=ls; src.loopEnd=le;
+  const g=AC.createGain(); src.connect(g); g.connect(AC.destination); sl.gain=g;
+  src.start(startAt, ls); slotSrcs.push({src,sl}); applyGains();
+}
+function applyGains(){ const solo=slots.some(s=>s.solo); slotSrcs.forEach(({src,sl})=>{ const on=solo?sl.solo:!sl.muted; if(sl.gain)sl.gain.gain.value=on?(sl.vol==null?0.9:sl.vol):0; }); }
+$("playAll").onclick=()=>{ if(playing)stopAll(); else playAll(); };
+$("clickBtn").onclick=()=>{ clickOn=!clickOn; $("clickBtn").classList.toggle("on",clickOn); $("clickBtn").textContent="Click: "+(clickOn?"ON":"OFF"); };
+$("mtUp").onclick=()=>{ $("masterBpm").value=Math.min(300,Math.round(masterTempo())+1); if(playing)playAll(); };
+$("mtDown").onclick=()=>{ $("masterBpm").value=Math.max(40,Math.round(masterTempo())-1); if(playing)playAll(); };
+$("masterBpm").onchange=()=>{ if(playing)playAll(); };
+$("clkVolR").oninput=e=>{ clkVol=+e.target.value/100; saveSoon(); };
+$("audClk").onclick=()=>{ audClickOn=!audClickOn; $("audClk").classList.toggle("on",audClickOn); $("audClk").textContent="Audition click: "+(audClickOn?"ON":"OFF"); };
+$("loopAud").onclick=()=>{ loopAudOn=!loopAudOn; $("loopAud").classList.toggle("on",loopAudOn); $("loopAud").textContent="Loop: "+(loopAudOn?"ON":"OFF"); if(prevSrc){stopPrev();prevIdx=-1;} };
+
+// ---- click scheduler (shared) ----
+let clkNext=0;
+function beep(when,acc){ const o=AC.createOscillator(),g=AC.createGain(); o.frequency.value=acc?2300:1500; o.connect(g); g.connect(AC.destination);
+  const v=Math.max(0.0002,(acc?0.5:0.32)*clkVol); g.gain.setValueAtTime(0.0001,when); g.gain.exponentialRampToValueAtTime(v,when+0.001); g.gain.exponentialRampToValueAtTime(0.0001,when+0.05); o.start(when); o.stop(when+0.06); }
+function startClick(tempo){ if(clkTimer)clearInterval(clkTimer); const beat=60/tempo; let k=0;
+  clkTimer=setInterval(()=>{ if(!clickOn||!AC)return; const now=AC.currentTime, hi=now+0.12;
+    while(clkRef+k*beat < hi){ const w=clkRef+k*beat; if(w>now-0.02) beep(Math.max(now+0.004,w), k%4===0); k++; } },25); }
+let clkSchedTo=0;
+function startCropClick(tempo,period){ if(clkTimer)clearInterval(clkTimer); if(!(period>0)){startClick(tempo);return;} const beat=60/tempo; clkSchedTo=clkRef-0.001;
+  clkTimer=setInterval(()=>{ if(!clickOn||!AC)return; const now=AC.currentTime,hi=now+0.12; if(clkSchedTo<now-0.5)clkSchedTo=now-0.001;
+    let c=Math.max(0,Math.floor((clkSchedTo-clkRef)/period));
+    for(;;){ const cs=clkRef+c*period; if(cs>hi)break;
+      for(let b=0;b*beat<period-1e-4;b++){ const w=cs+b*beat; if(w>hi)break; if(w>clkSchedTo)beep(Math.max(now+0.004,w),b===0); }
+      c++; }
+    clkSchedTo=hi; },25); }
+
+// ---- cropper ----
+let cropK=-1, cropSrc=null, cropT0=0, cropA=0, cropB=0, clickState=1, cropRAF=null, cropSens=0.35, cropLoopMode=1, cropPS=0, cropPE=0, vZoom=1, cropLoopDur=0.5;
+const CLKLBL=["Off","REL","ABS"];
+function ensureVisible(t,frac){ if(!wcv)return; wVS=t-(frac*wcv.width)/wPpx; }
+const LOOPLBL=["Off","A–B","Whole"];
+let aOn=false,bOn=false;
+function mode(){ return (aOn&&bOn)?"slip":aOn?"A":bOn?"B":"zoom"; }
+function onsetsOf(sidx){ return (SAMPLES[sidx].onsets||[]).filter(o=>o[1]>=cropSens).map(o=>o[0]); }
+let transSnap=false;
+// snap a timeline position to the nearest transient (accounting for slip), when Snap is on and within ~30px
+function snapT(t){ if(!transSnap||cropK<0)return t; const sl=slots[cropK],off=sl.slip||0,f=onsetsOf(sl.sidx); if(!f.length)return t;
+  let best=t,bd=1e9; for(const o of f){ const c=o-off, d=Math.abs(c-t); if(d<bd){bd=d;best=c;} } return (bd*wPpx<=30)?best:t; }
+function updSensN(){ if(cropK<0)return; $("sensN").textContent=onsetsOf(slots[cropK].sidx).length+" hits"; }
+function syncCrop(){ const sl=slots[cropK]; if(!sl)return; sl.cin=cropA; sl.cout=cropB; sl.downbeat=cropA; saveSoon(); }
+function updReadout(){ const m=mode(),sl=slots[cropK]; if(!sl)return;
+  $("slipVal").textContent = m==="A"?("A "+cropA.toFixed(3)+"s") : m==="B"?("B "+cropB.toFixed(3)+"s") : m==="slip"?(Math.round((sl.slip||0)*1000)+" ms") : "pinch to zoom"; }
+function updABUI(){ const both=aOn&&bOn; $("btnA").hidden=both; $("btnB").hidden=both; $("btnSlip").hidden=!both;   // A+B fold into one Slip button
+  $("btnA").classList.toggle("on",aOn); $("btnB").classList.toggle("on",bOn); $("btnSlip").classList.add("on"); $("fsZone").classList.toggle("on",zoneMode);
+  const m=mode(); $("stepTarget").textContent = m==="A"?"Downbeat A":m==="B"?"Loop end B":m==="slip"?"Slip":"Zoom";
+  $("waveHint").textContent = zoneMode
+    ? "ZONE · touch green/orange zone → move that marker · elsewhere above center → slip · below center → pan + pinch-zoom"
+    : "A + B → Slip · none lit → pinch/zoom/move";
+  updReadout(); waveDraw(); saveSoon(); }
+// effective (heard) tempo: pitch-preserving → the target; VSO (stretch off) → transpose also scales tempo
+function effTempo(sl){ if(!sl)return 0; const base=sl.baseBpm||sl.bpm||120; const target=(sl.bpmManual? sl.bpm : base);
+  const semis=sl.transpose||0; if(sl.stretch) return target; return target*(semis!==0?Math.pow(2,semis/12):1); }
+function updTempoDisp(){ const sl=slots[cropK]; if(!sl)return; const bars=parseInt($("bars").value)||1; const eff=effTempo(sl);
+  const vso=!sl.stretch && ((sl.transpose||0)!==0 || (!!sl.bpmManual && Math.abs((sl.bpm||0)-(sl.baseBpm||sl.bpm||0))>1e-6));
+  $("cropBpm").textContent=(eff?eff.toFixed(2):"—")+" bpm"+(sl.bpmManual?" ✎":"")+(vso?" ⤢vso":"");
+  $("baseBpm").textContent="detected "+((sl.baseBpm||sl.bpm)?(sl.baseBpm||sl.bpm).toFixed(2):"—")+" @ "+bars+"bar"; updDoneBtn(); saveSoon(); }
+function recalcDisp(){ const sl=slots[cropK]; if(!sl)return; if(cropB>cropA){ const bars=parseInt($("bars").value),base=bars*4*60/(cropB-cropA); sl.baseBpm=base; if(!sl.bpmManual)sl.bpm=base; sl.downbeat=cropA; } updTempoDisp(); }
+function recalc(){ recalcDisp(); syncCrop(); updReadout(); waveDraw(); bump(); }
+function openCropper(k){ if(playing)stopAll(); stopPrev();   // edit and audition must never sound at once
+  cropK=k; const sl=slots[k]; $("cropName").textContent=sl.name;
+  cropA=(sl.downbeat!=null?sl.downbeat:sl.cin)||0; cropB=sl.cout||SAMPLES[sl.sidx].dur; aOn=false; bOn=false;
+  zoneMode=false; $("btnZone").classList.remove("on"); $("fsZone")&&$("fsZone").classList.remove("on");   // default: pinch/zoom/move, nothing lit
+  transSnap=false; $("btnTrans").classList.remove("on"); $("fsTrans")&&$("fsTrans").classList.remove("on"); $("sensRow").style.display="none";
+  $("cropLoop").textContent="Loop: "+LOOPLBL[cropLoopMode]; $("cropLoop").classList.toggle("on",cropLoopMode>0);
+  clickOn=clickState>0; $("cropClk").textContent="Click: "+CLKLBL[clickState]; $("cropClk").classList.toggle("on",clickState>0);
+  $("sens").value=Math.round((cropSens-0.03)/0.7*100); updSensN(); recalcDisp(); updABUI();
+  undoStack=[]; $("undoN").textContent="0"; updTranspose();
+  $("crop").hidden=false; waveFit(); cropDraw(); saveSoon(); }
+function cropPos(){ if(!cropSrc)return cropPS; const d=Math.max(0.02,cropLoopDur); const frac=((AC.currentTime-cropT0)%d)/d; return cropPS+frac*Math.max(0.02,cropPE-cropPS); }
+function cropDraw(){ const pos=cropPos().toFixed(2)+"s"; $("cropPos").textContent=pos; if(waveExpanded)$("fsInfo").textContent=$("cropBpm").textContent+"  ·  "+pos; if(cropSrc)waveDraw(); cropRAF=requestAnimationFrame(cropDraw); }
+// preview engine: WSOLA time-stretch (pitch-preserving) for tempo changes + stretch-mode transpose; playbackRate for vari-speed transpose
+async function cropPlay(){ ensureAudio(); const sl=slots[cropK]; if(cropSrc){stopCrop();return;}
+  const buf=await getBuf(sl.sidx); let ps,pe,doLoop=true;
+  if(cropLoopMode===2){ ps=0; pe=buf.duration; } else if(cropLoopMode===1){ ps=cropA; pe=cropB>cropA?Math.min(buf.duration,cropB):buf.duration; } else { ps=0; pe=buf.duration; doLoop=false; }
+  cropPS=ps; cropPE=Math.max(ps+0.05,pe); const off=sl.slip||0;
+  const ls=Math.max(0,Math.min(buf.duration-0.05,cropPS+off)), le=Math.max(ls+0.05,Math.min(buf.duration,cropPE+off));
+  const semis=sl.transpose||0, pR=Math.pow(2,semis/12);
+  const base=sl.baseBpm||sl.bpm||120, tempoAdj=!!sl.bpmManual && sl.bpm>0 && Math.abs(sl.bpm-base)>1e-6;
+  const sT = tempoAdj ? (sl.bpm/base) : 1;                         // tempo speed multiplier (target/base)
+  let playBuf=buf, pls=ls, ple=le, rate;
+  if(sl.stretch){                                                 // Stretch ON → pitch-preserving: WSOLA for BOTH tempo and transpose
+    const wsolaF=(tempoAdj?(base/sl.bpm):1)*(semis!==0?pR:1);
+    if(Math.abs(wsolaF-1)>1e-6){ playBuf=renderStretch(buf,ls,le,wsolaF); pls=0; ple=playBuf.duration; }
+    rate = semis!==0 ? pR : 1;
+  } else { rate = sT * pR; }                                      // Stretch OFF → VSO: one playback rate carries tempo × pitch
+  if(sl.reverse){ const rb=revRegion(playBuf,pls,ple); playBuf=rb; pls=0; ple=rb.duration; }   // reverse the (possibly stretched) region for live preview
+  cropLoopDur = (ple-pls)/rate;
+  cropSrc=AC.createBufferSource(); cropSrc.buffer=playBuf; cropSrc.loop=doLoop; cropSrc.loopStart=pls; cropSrc.loopEnd=Math.max(pls+0.02,ple); cropSrc.playbackRate.value=rate;
+  if(!doLoop) cropSrc.onended=()=>stopCrop();
+  cropSrc.connect(AC.destination); cropT0=AC.currentTime+0.05; cropSrc.start(cropT0,pls);
+  document.querySelectorAll(".cplay").forEach(b=>b.textContent="⏹ Stop");
+  const eff=effTempo(sl);
+  clkRef=cropT0; clickOn=clickState>0; if(noClickOnce){noClickOnce=false;} else if(clickState===1){ startCropClick(eff, cropLoopDur); } else if(clickState===2){ startClick(eff); } }
+function stopCrop(){ if(cropSrc){try{cropSrc.stop();}catch(e){}cropSrc=null;} if(clkTimer){clearInterval(clkTimer);clkTimer=null;} document.querySelectorAll(".cplay").forEach(b=>b.textContent="▶ Play"); }
+function bump(){ if(cropSrc){ stopCrop(); cropPlay(); } }
+let wcv=null,wctx=null,wPpx=100,wVS=0,wptrs=new Map(),wpinch=null,wdrag=null,noClickOnce=false,zoneMode=false,waveExpanded=false,waveHome=null,wavePH=null;
+const ZONE_PX=32;   // grab-zone half-width around each marker line, in pixels
+function waveH(){ return waveExpanded ? Math.max(220,(window.innerHeight-($("waveFSbar").offsetHeight||60)-26)|0) : 120; }
+function waveResize(){ if(!wcv)return; const H=waveH(); wcv.style.height=H+"px"; wcv.width=wcv.clientWidth||600; wcv.height=H; waveDraw(); }
+// move the same #wave canvas into the full-screen host and back (keeps all its handlers live)
+function waveExpand(on){ const cv=$("waveStage"); if(on===waveExpanded)return;
+  if(on){ waveHome=cv.parentNode; wavePH=document.createComment("wh"); waveHome.insertBefore(wavePH,cv); $("waveFShost").appendChild(cv); waveExpanded=true; $("waveFS").hidden=false; }
+  else { if(wavePH&&wavePH.parentNode)wavePH.parentNode.insertBefore(cv,wavePH); else if(waveHome)waveHome.appendChild(cv); if(wavePH){wavePH.remove();wavePH=null;} waveExpanded=false; $("waveFS").hidden=true; }
+  requestAnimationFrame(waveResize); saveSoon(); }
+// non-zone action for a single-finger touch (zone mode is resolved in pointerdown by touch location)
+function actAt(p){ const m=mode(); return (m==="zoom")?"pan":m; }
+// in zone mode, which action a top-half touch at x performs: nearest marker within its zone, else slip
+function zoneAct(x){ const xs=(cropA-wVS)*wPpx, xe=(cropB-wVS)*wPpx, dA=Math.abs(x-xs), dB=Math.abs(x-xe);
+  if(dA<=ZONE_PX && dA<=dB) return "A"; if(dB<=ZONE_PX) return "B"; return "slip"; }
+function waveFit(){ if(!wcv){wcv=$("wave");wctx=wcv.getContext("2d");} if(cropK<0)return; const win=Math.max(0.2,cropB-cropA);
+  const H=waveH(); wcv.style.height=H+"px"; wcv.width=wcv.clientWidth||600; wcv.height=H; wPpx=wcv.width*0.6/win; wVS=cropA-(wcv.width*0.2)/wPpx; waveDraw(); }
+function waveDraw(){ if(!wctx||cropK<0)return; const sl=slots[cropK],S=SAMPLES[sl.sidx],P=S.peaks||[],dur=S.dur||1,w=wcv.width,h=wcv.height,off=sl.slip||0,m=mode();
+  wctx.clearRect(0,0,w,h); if(m==="slip"&&!zoneMode){ wctx.fillStyle="rgba(58,122,254,0.10)"; wctx.fillRect(0,0,w,h); }
+  if(zoneMode){ const zA=(cropA-wVS)*wPpx, zB=(cropB-wVS)*wPpx;   // grab-zones around the markers (top half), pan below center
+    wctx.fillStyle="rgba(52,199,89,0.16)"; wctx.fillRect(zA-ZONE_PX,0,2*ZONE_PX,h/2);
+    wctx.fillStyle="rgba(255,149,0,0.16)"; wctx.fillRect(zB-ZONE_PX,0,2*ZONE_PX,h/2);
+    wctx.fillStyle="rgba(120,120,120,0.12)"; wctx.fillRect(0,h/2,w,h/2);
+    wctx.save(); wctx.strokeStyle="#8886"; wctx.setLineDash([5,4]); wctx.lineWidth=1; wctx.beginPath(); wctx.moveTo(0,h/2); wctx.lineTo(w,h/2); wctx.stroke(); wctx.restore(); }
+  wctx.strokeStyle="#79a8d8"; wctx.globalAlpha=.6; wctx.beginPath(); const bd=dur/(P.length||1);
+  for(let i=0;i<P.length;i++){ const t=i*bd,x=(t-off-wVS)*wPpx; if(x<-2)continue; if(x>w+2)break; const a=Math.min(h*0.48,P[i]/100*(h*0.45)*vZoom); wctx.moveTo(x,h/2-a); wctx.lineTo(x,h/2+a); }
+  wctx.stroke(); wctx.globalAlpha=1;
+  if(transSnap){ const f=onsetsOf(sl.sidx); wctx.strokeStyle="rgba(255,45,85,0.55)"; wctx.lineWidth=1.5; wctx.beginPath();
+    for(const o of f){ const x=(o-off-wVS)*wPpx; if(x<-1||x>w+1)continue; wctx.moveTo(x,h*0.62); wctx.lineTo(x,h); } wctx.stroke(); }
+  const xs=(cropA-wVS)*wPpx,xe=(cropB-wVS)*wPpx;
+  wctx.strokeStyle="#34c759"; wctx.lineWidth=aOn?3.5:2; wctx.beginPath(); wctx.moveTo(xs,0); wctx.lineTo(xs,h); wctx.stroke();
+  wctx.strokeStyle="#ff9500"; wctx.lineWidth=bOn?3.5:2; wctx.beginPath(); wctx.moveTo(xe,0); wctx.lineTo(xe,h); wctx.stroke();
+  if(cropSrc){ const px=(cropPos()-wVS)*wPpx; if(px>=-4&&px<=w+4){ wctx.strokeStyle="#ff2d55"; wctx.lineWidth=2.5; wctx.beginPath(); wctx.moveTo(px,0); wctx.lineTo(px,h); wctx.stroke(); wctx.fillStyle="#ff2d55"; wctx.beginPath(); wctx.moveTo(px-5,0); wctx.lineTo(px+5,0); wctx.lineTo(px,8); wctx.closePath(); wctx.fill(); } } }
+function wxy(e){ const r=$("wave").getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+(function(){ const c=$("wave");
+  c.addEventListener("pointerdown",e=>{ e.preventDefault(); try{c.setPointerCapture(e.pointerId);}catch(_){} const p=wxy(e); wptrs.set(e.pointerId,p);
+    if(wptrs.size>=2){ const a=[...wptrs.values()],cx=(a[0].x+a[1].x)/2,cy=(a[0].y+a[1].y)/2;
+      const canPinch = zoneMode ? (cy>=wcv.height/2) : (mode()==="zoom");
+      if(canPinch){ wpinch={d0:Math.abs(a[0].x-a[1].x)||1,ppx0:wPpx,cx,cxT:wVS+cx/wPpx}; } wdrag=null; return; }
+    const sl=slots[cropK]; let act;
+    if(zoneMode){ if(p.y>=wcv.height/2){ act="pan"; }
+      else { act=zoneAct(p.x); if(act==="A"){aOn=true;bOn=false;} else if(act==="B"){aOn=false;bOn=true;} else {aOn=true;bOn=true;} updABUI(); } }
+    else act=actAt(p);
+    if(act==="A"||act==="B"||act==="slip")snap();
+    if(act==="A") wdrag={t:"A",x0:p.x,v0:cropA}; else if(act==="B") wdrag={t:"B",x0:p.x,v0:cropB}; else if(act==="slip") wdrag={t:"slip",x0:p.x,v0:sl.slip||0}; else if(act==="pan") wdrag={t:"pan",x0:p.x,v0:wVS}; else wdrag=null; });
+  c.addEventListener("pointermove",e=>{ if(!wptrs.has(e.pointerId))return; const p=wxy(e); wptrs.set(e.pointerId,p);
+    if(wpinch){ const a=[...wptrs.values()]; if(a.length>=2){ const d=Math.abs(a[0].x-a[1].x)||1; wPpx=Math.max(20,Math.min(8000,wpinch.ppx0*d/wpinch.d0)); wVS=wpinch.cxT-wpinch.cx/wPpx; waveDraw(); } return; }
+    if(!wdrag)return; const dx=(p.x-wdrag.x0)/wPpx, sl=slots[cropK], dur=SAMPLES[sl.sidx].dur;
+    if(wdrag.t==="A"){ cropA=Math.max(0,Math.min(cropB-0.02,snapT(wdrag.v0+dx))); recalcDisp(); }
+    else if(wdrag.t==="B"){ cropB=Math.max(cropA+0.02,Math.min(dur,snapT(wdrag.v0+dx))); recalcDisp(); }
+    else if(wdrag.t==="slip"){ sl.slip=wdrag.v0-dx; }
+    else if(wdrag.t==="pan"){ wVS=wdrag.v0-dx; }
+    updReadout(); waveDraw(); });
+  function up(e){ wptrs.delete(e.pointerId); if(wpinch&&wptrs.size<2)wpinch=null; if(wptrs.size===0&&wdrag){ const t=wdrag.t; wdrag=null; if(t==="A"||t==="B"||t==="slip"){ syncCrop(); bump(); } } }
+  c.addEventListener("pointerup",up); c.addEventListener("pointercancel",up); })();
+function abView(){ const m=mode(); if(m==="slip"||m==="A")ensureVisible(cropA,0.28); else if(m==="B")ensureVisible(cropB,0.72); }
+$("btnA").onclick=()=>{ aOn=!aOn; abView(); updABUI(); };
+$("btnB").onclick=()=>{ bOn=!bOn; abView(); updABUI(); };
+$("btnSlip").onclick=()=>{ aOn=false; bOn=false; updABUI(); };   // tap Slip → back to A/B, nothing lit = zoom/move
+$("btnZone").onclick=()=>{ zoneMode=!zoneMode; if(!zoneMode){ aOn=false; bOn=false; } $("btnZone").classList.toggle("on",zoneMode); updABUI(); };
+window.addEventListener("resize",()=>{ if(waveExpanded)waveResize(); else if(!$("crop").hidden)waveFit(); });
+$("waveBig").onclick=()=>waveExpand(true);
+$("waveClose").onclick=()=>waveExpand(false);
+$("fsZone").onclick=()=>$("btnZone").click();
+$("fsTrans").onclick=()=>$("btnTrans").click();
+$("fsUndo").onclick=()=>doUndo();
+document.querySelectorAll(".cplay").forEach(b=>b.onclick=cropPlay);
+$("cropClk").onclick=()=>{ clickState=(clickState+1)%3; clickOn=clickState>0; $("cropClk").textContent="Click: "+CLKLBL[clickState]; $("cropClk").classList.toggle("on",clickState>0); if(cropSrc)bump(); };
+$("vzIn").onclick=()=>{ vZoom=Math.min(12,vZoom*1.5); waveDraw(); };
+$("vzOut").onclick=()=>{ vZoom=Math.max(0.4,vZoom/1.5); waveDraw(); };
+$("cropLoop").onclick=()=>{ cropLoopMode=(cropLoopMode+1)%3; $("cropLoop").classList.toggle("on",cropLoopMode>0); $("cropLoop").textContent="Loop: "+LOOPLBL[cropLoopMode]; if(cropSrc){stopCrop();cropPlay();} };
+// Bars only changes the measurement → it multiplies/divides the SHOWN tempo; it must not re-stretch the audio.
+$("bars").onchange=()=>{ const sl=slots[cropK]; if(!sl){recalcDisp();return;} snap();
+  const oldBase=sl.baseBpm||sl.bpm||120; recalcDisp();                               // recalcDisp updates sl.baseBpm (+ sl.bpm if not manual)
+  if(sl.bpmManual && oldBase>0) sl.bpm=sl.bpm*(sl.baseBpm/oldBase);                   // keep target/base ratio → same (or no) stretch, audio unchanged
+  updTempoDisp(); syncCrop(); updReadout(); waveDraw(); if(cropSrc)bump(); };
+$("sens").oninput=e=>{ cropSens=0.03+(e.target.value/100)*0.7; updSensN(); waveDraw(); };
+$("btnTrans").onclick=()=>{ transSnap=!transSnap; $("btnTrans").classList.toggle("on",transSnap); $("fsTrans")&&$("fsTrans").classList.toggle("on",transSnap); $("sensRow").style.display=transSnap?"":"none"; if(transSnap)updSensN(); waveDraw(); };
+let undoStack=[];
+function snap(){ const sl=slots[cropK]; if(!sl)return; undoStack.push({A:cropA,B:cropB,slip:sl.slip||0,tr:sl.transpose||0,st:!!sl.stretch,bars:$("bars").value,bpm:sl.bpm,bpmM:!!sl.bpmManual}); if(undoStack.length>4)undoStack.shift(); $("undoN").textContent=undoStack.length; }
+function doUndo(){ if(!undoStack.length)return; const s=undoStack.pop(), sl=slots[cropK]; cropA=s.A; cropB=s.B; sl.slip=s.slip; sl.transpose=s.tr; sl.stretch=s.st; $("bars").value=s.bars; sl.bpm=s.bpm; sl.bpmManual=s.bpmM; syncCrop(); updTranspose(); recalcDisp(); updReadout(); waveDraw(); bump(); $("undoN").textContent=undoStack.length; }
+$("undoBtn").onclick=doUndo;
+function updTranspose(){ const sl=slots[cropK]; if(!sl)return; const t=sl.transpose||0; $("transVal").textContent=(t>0?"+":"")+t+" st"; $("btnStretch").textContent="Stretch: "+(sl.stretch?"on":"off"); $("btnStretch").classList.toggle("on",!!sl.stretch); $("btnRev").classList.toggle("on",!!sl.reverse); updTempoDisp(); saveSoon(); }
+$("btnRev").onclick=()=>{ snap(); const sl=slots[cropK]; if(!sl)return; sl.reverse=!sl.reverse; updTranspose(); bump(); };
+$("trUp").onclick=()=>{ snap(); const sl=slots[cropK]; sl.transpose=Math.min(24,(sl.transpose||0)+1); updTranspose(); bump(); };
+$("trDown").onclick=()=>{ snap(); const sl=slots[cropK]; sl.transpose=Math.max(-24,(sl.transpose||0)-1); updTranspose(); bump(); };
+$("trReset").onclick=()=>{ snap(); slots[cropK].transpose=0; updTranspose(); bump(); };
+$("btnStretch").onclick=()=>{ snap(); const sl=slots[cropK]; sl.stretch=!sl.stretch; updTranspose(); bump(); };
+// tempo: the mirror of transpose — change tempo while A/B edit points stay fixed (pitch-preserving stretch)
+function stepTempo(dir){ const sl=slots[cropK]; if(!sl)return; snap(); sl.bpm=Math.max(20,Math.min(400,(sl.bpm||120)+dir)); sl.bpmManual=true; updTempoDisp(); if(cropSrc)bump(); }
+$("tempoUp").onclick=()=>stepTempo(1);
+$("tempoDown").onclick=()=>stepTempo(-1);
+$("tempoReset").onclick=()=>{ const sl=slots[cropK]; if(!sl)return; snap(); sl.bpmManual=false; sl.bpm=sl.baseBpm||sl.bpm; updTempoDisp(); if(cropSrc)bump(); };
+(function(){ const el=$("cropBpm"); let t=null,edit=false;   // long-press to type an exact tempo
+  const start=()=>{ if(edit||cropK<0)return; t=setTimeout(()=>{ t=null; edit=true; el.contentEditable="true"; el.classList.add("editing"); el.textContent=(slots[cropK].bpm||120).toFixed(2); el.focus(); const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r); },450); };
+  const cancel=()=>{ if(t){clearTimeout(t);t=null;} };
+  const finish=save=>{ if(!edit)return; edit=false; el.contentEditable="false"; el.classList.remove("editing"); getSelection().removeAllRanges(); const v=parseFloat(el.textContent), sl=slots[cropK];
+    if(save&&v>=20&&v<=400&&sl){ snap(); sl.bpm=v; sl.bpmManual=true; } updTempoDisp(); if(cropSrc)bump(); };
+  el.addEventListener("pointerdown",start); el.addEventListener("pointerup",cancel); el.addEventListener("pointermove",cancel); el.addEventListener("pointercancel",cancel);
+  el.addEventListener("blur",()=>finish(true));
+  el.addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();el.blur();} else if(e.key==="Escape"){e.preventDefault();finish(false);} }); })();
+let reIdx=-1;
+function openReDlg(k){ reIdx=k; $("reDlg").hidden=false; }
+$("reEdit").onclick=()=>{ $("reDlg").hidden=true; openCropper(reIdx); };
+function nextVersionName(base){ const root=(base||"sample").replace(/\s+V\d+$/i,"").trim();
+  const esc=root.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"); const rx=new RegExp("^"+esc+"\\s+V(\\d+)$","i"); let max=1;
+  allItems().forEach(s=>{ const n=(s.name||"").trim(); if(n===root)max=Math.max(max,1); const m=n.match(rx); if(m)max=Math.max(max,parseInt(m[1])); });
+  return root+" V"+(max+1); }
+$("reCopy").onclick=()=>{ if(slots.length>=6){ alert("Send a slot to the session first to free a slot for the copy."); return; } const cp={...slots[reIdx]}; cp.name=nextVersionName(cp.name); slots.push(cp); renderSlots(); $("reDlg").hidden=true; openCropper(slots.length-1); };
+$("reCancel").onclick=()=>{ $("reDlg").hidden=true; };
+// WSOLA time-stretch (pitch-preserving). Pre-renders the crop region stretched by `stretch` (out/in length).
+function wsola(x, stretch, outN){ const N=x.length;
+  if(N<2048 || !isFinite(stretch) || stretch<=0){ const y=new Float32Array(outN); for(let i=0;i<outN;i++){ const t=i/stretch,j=t|0,f=t-j; y[i]=(x[j]||0)*(1-f)+(x[j+1]||0)*f; } return y; }
+  const W=1024,Hs=512,Ha=Math.max(1,Math.round(Hs/stretch)),tol=256;   // smaller window → sharper transients, tighter against the click
+  const win=new Float32Array(W); for(let i=0;i<W;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(W-1));
+  const yN=outN+W, y=new Float32Array(yN), nrm=new Float32Array(yN);
+  let ana=0, syn=0, nat=0;
+  while(syn<outN){                                   // fill the ENTIRE output — no trailing silence (which would lengthen the loop)
+    const anaC=Math.max(0,Math.min(N-W,ana));        // clamp read into available input; near the end it reuses the tail
+    let best=0,bestS=-Infinity; const lo=Math.max(-tol,-anaC),hi=Math.min(tol,N-W-anaC);
+    for(let d=lo;d<=hi;d+=2){ let s=0; const a=anaC+d; for(let i=0;i<W;i+=6){ s+=x[a+i]*x[nat+i]; } if(s>bestS){bestS=s;best=d;} }
+    const p=Math.max(0,Math.min(N-W,anaC+best));
+    for(let i=0;i<W;i++){ const w=win[i]; y[syn+i]+=x[p+i]*w; nrm[syn+i]+=w; }
+    nat=Math.min(N-W,p+Hs); ana+=Ha; syn+=Hs;
+  }
+  const out=new Float32Array(outN);
+  for(let i=0;i<outN;i++){ out[i]= nrm[i]>1e-6 ? y[i]/nrm[i] : y[i]; }
+  return out;
+}
+function renderStretch(buf, ls, le, stretch, forceOutN){ const sr=buf.sampleRate, i0=Math.max(0,Math.floor(ls*sr)), i1=Math.min(buf.length,Math.floor(le*sr));
+  const n=Math.max(1,i1-i0), nch=buf.numberOfChannels, outN=forceOutN?Math.max(2,Math.round(forceOutN)):Math.max(2,Math.round(n*stretch)), out=AC.createBuffer(nch,outN,sr);
+  for(let c=0;c<nch;c++){ const x=buf.getChannelData(c).subarray(i0,i1); out.getChannelData(c).set(wsola(x,outN/n,outN)); }
+  return out; }
+function sliceBuf(buf, ls, le){ const sr=buf.sampleRate,i0=Math.max(0,Math.floor(ls*sr)),i1=Math.min(buf.length,Math.floor(le*sr)),n=Math.max(2,i1-i0),nch=buf.numberOfChannels,out=AC.createBuffer(nch,n,sr);
+  for(let c=0;c<nch;c++) out.getChannelData(c).set(buf.getChannelData(c).subarray(i0,i1)); return out; }
+function resampleBuf(inBuf, rate){ const nch=inBuf.numberOfChannels,sr=inBuf.sampleRate,inN=inBuf.length,outN=Math.max(2,Math.round(inN/rate)),out=AC.createBuffer(nch,outN,sr);
+  for(let c=0;c<nch;c++){ const x=inBuf.getChannelData(c),y=out.getChannelData(c); for(let i=0;i<outN;i++){ const t=i*rate,j=t|0,f=t-j; y[i]=(x[j]||0)*(1-f)+(x[j+1]||0)*f; } } return out; }
+function revRegion(buf, ls, le){ const sr=buf.sampleRate,i0=Math.max(0,Math.floor(ls*sr)),i1=Math.min(buf.length,Math.floor(le*sr)),n=Math.max(2,i1-i0),nch=buf.numberOfChannels,out=AC.createBuffer(nch,n,sr);
+  for(let c=0;c<nch;c++){ const x=buf.getChannelData(c),y=out.getChannelData(c); for(let k=0;k<n;k++) y[k]=x[i1-1-k]; } return out; }
+// true when the slot carries an audible transpose or tempo change (stretch alone is just a modifier of transpose)
+function hasMods(sl){ if(!sl)return false; const base=sl.baseBpm||sl.bpm||120; return ((sl.transpose||0)!==0) || !!sl.reverse || (!!sl.bpmManual && Math.abs((sl.bpm||base)-base)>1e-6); }
+function updDoneBtn(){ const sl=slots[cropK]; const on=hasMods(sl); $("cropDone").textContent=on?"⧉ Render":"Done"; $("cropDone").title=on?"bake the tempo/transpose into a new rendered file":"keep edits and close"; }
+// bake crop + transpose + tempo into a fresh AudioBuffer for faithful audition (the build reproduces it from the manifest recipe)
+async function bakeRender(sl){ const buf=await getBuf(sl.sidx); const off=sl.slip||0;
+  const ls=Math.max(0,Math.min(buf.duration-0.05,sl.cin+off)), le=Math.max(ls+0.05,Math.min(buf.duration,sl.cout+off));
+  const semis=sl.transpose||0, pR=Math.pow(2,semis/12);
+  const base=sl.baseBpm||sl.bpm||120, tempoAdj=!!sl.bpmManual && Math.abs(sl.bpm-base)>1e-6, sT=tempoAdj?(sl.bpm/base):1;
+  let out;
+  if(sl.stretch){                                                                            // pitch-preserving (same WSOLA as tempo)
+    const wsolaF=(tempoAdj?(base/sl.bpm):1)*(semis!==0?pR:1);
+    out=(Math.abs(wsolaF-1)>1e-6)?renderStretch(buf,ls,le,wsolaF):sliceBuf(buf,ls,le);
+    if(semis!==0) out=resampleBuf(out,pR);
+  } else { const rate=sT*pR;                                                                 // VSO: tempo × pitch in one resample
+    out=(Math.abs(rate-1)>1e-6)? resampleBuf(sliceBuf(buf,ls,le),rate) : sliceBuf(buf,ls,le); }
+  if(sl.reverse) out=revRegion(out,0,out.duration);
+  return out; }
+$("cropDone").onclick=async()=>{ const sl=slots[cropK]; if(waveExpanded)waveExpand(false);
+  if(hasMods(sl)){ $("cropDone").textContent="rendering…"; $("cropDone").disabled=true; try{ const b=await bakeRender(sl); sl.renderBuf=b; sl.renderDur=b.duration; }catch(e){ sl.renderBuf=null; } $("cropDone").disabled=false; }
+  else { sl.renderBuf=null; sl.renderDur=0; }
+  stopCrop(); if(cropRAF)cancelAnimationFrame(cropRAF); $("crop").hidden=true; renderSlots(); };
+$("cropCancel").onclick=()=>{ if(waveExpanded)waveExpand(false); stopCrop(); if(cropRAF)cancelAnimationFrame(cropRAF); $("crop").hidden=true; saveSoon(); };
+
+// ---- send / committed / create ----
+$("send").onclick=()=>{ stopAll(); committed.push(...slots); slots=[]; renderSlots(); renderCommitted(); };
+function renderCommitted(){ const box=$("committed"); box.innerHTML="";
+  if(!committed.length){ box.textContent="nothing yet"; }
+  else committed.forEach((s,i)=>{ const c=document.createElement("span"); c.className="chip";
+    const lbl=document.createElement("span"); lbl.textContent=s.name+" ("+(s.type==="loop"?s.bpm.toFixed(0)+"bpm":"1-shot")+")"; c.appendChild(lbl);
+    const x=document.createElement("button"); x.className="chipx"; x.textContent="×"; x.title="remove from session"; x.onclick=()=>removeCommitted(i); c.appendChild(x);
+    box.appendChild(c); });
+  $("create").disabled = !(committed.length||slots.length); saveSoon(); }
+function removeCommitted(i){ committed.splice(i,1); renderCommitted(); }
+function allItems(){ return committed.concat(slots); }
+function allTempos(){ const t=[...new Set(allItems().filter(s=>s.type==="loop").map(s=>Math.round(s.bpm)))]; t.sort((a,b)=>a-b); return t; }
+function sessTempoNow(){ const t=allTempos(); return t.length? t[0]:120; }
+$("create").onclick=()=>{ const items=allItems(); if(!items.length)return; const tempos=allTempos();
+  if(tempos.length>1){ const sel=$("tempoSel"); sel.innerHTML=""; tempos.forEach(b=>{const o=document.createElement("option");o.value=b;o.textContent=b;sel.appendChild(o);}); $("tempoDlg").hidden=false; }
+  else buildManifest(tempos[0]||120); };
+$("tempoOk").onclick=()=>{ $("tempoDlg").hidden=true; buildManifest(parseInt($("tempoSel").value)); };
+$("tempoCancel").onclick=()=>{ $("tempoDlg").hidden=true; };
+function buildManifest(tempo){ const items=allItems();
+  const data={session:{name:$("sessName").value||"Sample Session",tempo}, samples:items.map((s,i)=>({file:SAMPLES[s.sidx].file,name:s.name,type:s.type,
+     bpm:s.type==="loop"?+s.bpm.toFixed(3):null, baseBpm:s.type==="loop"?+((s.baseBpm||s.bpm)).toFixed(3):null, effBpm:s.type==="loop"?+effTempo(s).toFixed(3):null, downbeat:s.type==="loop"?+(s.downbeat||0).toFixed(3):null,
+     crop:s.type==="loop"?[+s.cin.toFixed(3),+s.cout.toFixed(3)]:null, slip:s.type==="loop"?+((s.slip||0).toFixed(4)):null, transpose:s.transpose||0, stretch:!!s.stretch, reverse:!!s.reverse, vol:+((s.vol==null?0.9:s.vol).toFixed(2)), order:i}))};
+  const str="SAMPLES-BUILD "+JSON.stringify(data); $("capout").value=str;
+  navigator.clipboard.writeText(str).then(()=>{$("read").textContent="Manifest copied — paste it to me to build the session.";},()=>{$("capout").focus();$("capout").select();}); }
+
+["touchend","pointerdown","mousedown"].forEach(e=>document.addEventListener(e,ensureAudio,{passive:true,once:true}));
+
+// ---- stem separation (in-app via the viewer's Dropbox connector; chat fallback otherwise) ----
+const SEP_DIR="/SampleLoader/stemsep", SEPKEY="sampleLoader.sep";
+let DBX=null, dbxName={}, sepWatchOff=null; const sepIngested=new Set();
+const sepState=(()=>{ try{ return JSON.parse(localStorage.getItem(SEPKEY)||"{}"); }catch(e){ return {}; } })();
+sepState.pending=sepState.pending||{}; sepState.ready=sepState.ready||{};
+function sepSave(){ try{ localStorage.setItem(SEPKEY,JSON.stringify(sepState)); }catch(e){} }
+function say(t,focus){ const el=$("read"); if(!el)return; el.textContent=t;
+  if(focus){ el.setAttribute("tabindex","-1"); setTimeout(()=>{ try{el.focus();}catch(e){} },60); } }
+function payloadOf(r){ let p=r&&r.payload; if(typeof p==="string"){ try{p=JSON.parse(p);}catch(e){} } return p; }
+function asJson(p){ if(p&&typeof p==="object"&&typeof p.text==="string"){ try{return JSON.parse(p.text);}catch(e){return p;} } if(typeof p==="string"){ try{return JSON.parse(p);}catch(e){return p;} } return p; }
+async function dbxInit(){ if(DBX!==null)return DBX;
+  if(!(window.claude&&window.claude.mcp)){ DBX=false; return false; }
+  try{ const r=await window.claude.mcp.listTools();
+    for(const s of (r&&r.servers)||[]){ const names=(s.tools||[]).map(t=>t.name);
+      const find=k=>names.find(n=>n===k||n.endsWith("."+k)||n.endsWith("/"+k));
+      const lf=find("list_folder"), cf=find("create_file"), ft=find("fetch");
+      if(lf&&cf&&ft){ DBX=s.server; dbxName={list:lf,create:cf,fetch:ft}; return DBX; } }
+    DBX=false; }catch(e){ DBX=false; }
+  return DBX; }
+async function dbxCall(tool,input){ const r=await window.claude.mcp.callTool(DBX,dbxName[tool]||tool,input); return payloadOf(r); }
+function sepErrMsg(e){ const c=e&&e.code;
+  if(c==="needs_reauth")return "Dropbox needs reconnecting — claude.ai Settings, Connectors.";
+  if(c==="server_not_connected")return "Dropbox isn't connected — add it in claude.ai Settings, Connectors.";
+  if(c==="not_granted"||c==="capability_disabled"||c==="capability_removed")return "This view can't reach Dropbox — use the copied request in chat instead.";
+  if(c==="tool_error")return "Dropbox said no: "+((e&&e.message)||"unknown error");
+  return "Couldn't reach Dropbox ("+(c||"error")+")."; }
+function wavB64(buf){ const nch=Math.min(2,buf.numberOfChannels), n=buf.length, sr=buf.sampleRate;
+  const bytes=44+n*nch*2, ab=new ArrayBuffer(bytes), dv=new DataView(ab);
+  const W=(o,s)=>{ for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i)); };
+  W(0,"RIFF"); dv.setUint32(4,bytes-8,true); W(8,"WAVEfmt "); dv.setUint32(16,16,true);
+  dv.setUint16(20,1,true); dv.setUint16(22,nch,true); dv.setUint32(24,sr,true);
+  dv.setUint32(28,sr*nch*2,true); dv.setUint16(32,nch*2,true); dv.setUint16(34,16,true);
+  W(36,"data"); dv.setUint32(40,n*nch*2,true);
+  const chs=[]; for(let c=0;c<nch;c++)chs.push(buf.getChannelData(c));
+  let o=44; for(let i=0;i<n;i++)for(let c=0;c<nch;c++){ const v=Math.max(-1,Math.min(1,chs[c][i])); dv.setInt16(o,v*32767,true); o+=2; }
+  let s=""; const u=new Uint8Array(ab), CH=32768;
+  for(let i=0;i<u.length;i+=CH) s+=String.fromCharCode.apply(null,u.subarray(i,i+CH));
+  return btoa(s); }
+function renderSepStatus(){ let el=$("sepStatus"); const ids=Object.keys(sepState.pending);
+  if(!el){ el=document.createElement("p"); el.id="sepStatus"; el.className="sub"; el.setAttribute("aria-live","polite"); $("list").parentNode.insertBefore(el,$("list")); }
+  el.textContent=ids.length?("⚡ separating: "+ids.map(i=>sepState.pending[i].name).join(", ")+" … stems appear in the list when ready"):"";
+  const ch=$("sepChip"); if(ch){ ch.hidden=!ids.length;
+    ch.textContent="⚡ separating "+(ids.length>1?ids.length+" samples…":(sepState.pending[ids[0]]||{}).name+"…"); } }
+async function requestSep(i,model){ const s=SAMPLES[i]; if(!s)return;
+  const id=Date.now().toString(36)+"-"+(s.name||"smp").replace(/[^A-Za-z0-9]+/g,"_").slice(0,30);
+  const req={v:1,id,name:s.name,file:s.file,model,bpm:s.bpm||null,dur:s.dur,kind:s.uploaded?"upload":"library"};
+  let ok=null;
+  try{ ok=await Promise.race([dbxInit(), new Promise(r=>setTimeout(()=>r("timeout"),8000))]); }catch(e){ ok=false; }
+  if(ok==="timeout"){ const ch=$("sepChip"); if(ch)ch.hidden=true;
+    alert("Dropbox needs a one-time approval before the app can send this.\n\nLook for an Allow / Approve prompt near the top of the screen (claude.ai asks once). After allowing, tap Split into stems again.");
+    say("Waiting on a one-time Dropbox approval — allow it, then try again.",true); return; }
+  if(!ok){ const line="STEM-SEP "+JSON.stringify(req); try{ await navigator.clipboard.writeText(line); }catch(e){}
+    $("capout").value=line; const ch=$("sepChip"); if(ch)ch.hidden=true;
+    alert("This view has no direct Dropbox link. The request was copied — paste it to Claude in the chat"+(s.uploaded?" and drop the audio file there too.":"."));
+    say("Request copied for chat. "+ (s.uploaded?"Also drop the audio file in the chat.":""),true); return; }
+  say("Sending "+s.name+" for separation…");
+  try{
+    if(s.uploaded){ const buf=await getBuf(i);
+      if(buf.duration>240){ say("That upload is over 4 minutes — too big to send from here. Paste the request to Claude instead."); return; }
+      const b64=wavB64(buf), CH=1800000, parts=Math.ceil(b64.length/CH);
+      for(let p=0;p<parts;p++){ await dbxCall("create",{path:SEP_DIR+"/req-"+id+".wav.b64."+(p+1)+"of"+parts,content:b64.slice(p*CH,(p+1)*CH)}); say("Uploading audio "+(p+1)+" of "+parts+"…"); }
+      req.audio="req-"+id+".wav.b64"; req.parts=parts; }
+    await dbxCall("create",{path:SEP_DIR+"/req-"+id+".json",content:JSON.stringify(req)});
+    sepState.pending[id]={name:s.name,file:s.file,model,bpm:s.bpm||null}; sepSave(); renderSepStatus(); sepWatch();
+    say("Stem separation requested for "+s.name+". Stems will appear in the sample list when ready.",true);
+  }catch(e){ const ch=$("sepChip"); if(ch)ch.hidden=true; alert(sepErrMsg(e)); say(sepErrMsg(e),true); } }
+function sepWatch(){ if(sepWatchOff)return; if(!Object.keys(sepState.pending).length)return; if(!DBX||!(window.claude&&window.claude.mcp))return;
+  sepWatchOff=window.claude.mcp.watchTool(DBX,dbxName.list,{path:SEP_DIR,recursive:false},ev=>{
+    if(ev.type==="error"){ const c=ev.error&&ev.error.code; if(c==="needs_reauth"||c==="server_not_connected")say(sepErrMsg(ev.error)); return; }
+    const p=payloadOf(ev.result)||{}; const names=((p.entries)||[]).map(e=>e.name);
+    for(const id of Object.keys(sepState.pending)) if(names.indexOf("res-"+id+".json")>=0){
+      sepState.ready[id]=sepState.pending[id]; delete sepState.pending[id]; sepSave(); renderSepStatus(); ingestSep(id); }
+  },{refetchInterval:30000}); }
+async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id);
+  const pen=sepState.ready[id]; if(!pen)return;
+  try{ const man=asJson(await dbxCall("fetch",{id:SEP_DIR+"/res-"+id+".json"}));
+    ensureAudio(); let added=0;
+    for(const st of (man&&man.stems)||[]){ const pj=asJson(await dbxCall("fetch",{id:SEP_DIR+"/"+st.json}));
+      let buf; try{ buf=await AC.decodeAudioData(b64buf(pj.b64)); }catch(e){ continue; }
+      SAMPLES.push({file:st.file,name:pen.name+" · "+st.role,dur:+buf.duration.toFixed(3),frames:buf.length,
+        bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name}); added++; }
+    if(added){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say(added+" stems from "+pen.name+" are now in the sample list.",true); }
+    else{ sepIngested.delete(id); say("Stems for "+pen.name+" arrived but couldn't be read — tell Claude."); }
+    if(!Object.keys(sepState.pending).length&&sepWatchOff){ sepWatchOff(); sepWatchOff=null; }
+  }catch(e){ sepIngested.delete(id);
+    if(e&&e.code==="tool_error"){ delete sepState.ready[id]; sepSave(); }  // result files gone — stop retrying
+    else say(sepErrMsg(e)); } }
+$("dlgSep").onclick=()=>{ const s=SAMPLES[dlgIdx]; if(!s)return; stopPrev();
+  $("sepName").textContent="Split "+s.name+" into stems: choose 4 or 6 stems";
+  $("dlg").hidden=true; $("sepDlg").hidden=false;
+  setTimeout(()=>{ try{$("sepName").focus();}catch(e){} },60);
+  $("sepLink").textContent="checking the Dropbox link…";
+  dbxInit().then(ok=>{ $("sepLink").textContent= ok
+    ? "Dropbox link ready — stems come back into this list on their own."
+    : "No direct Dropbox link in this view — the request will be copied for you to paste to Claude instead."; }); };
+function sepGo(model){ $("sepDlg").hidden=true; const s=SAMPLES[dlgIdx];
+  const ch=$("sepChip"); if(ch){ ch.hidden=false; ch.textContent="⚡ requesting…"; }
+  say("Requesting stem separation for "+((s||{}).name||"sample")+" — one moment…",true);
+  requestSep(dlgIdx,model); }
+if(location.hostname.endsWith("github.io")){ const b=$("instBtn"); if(b)b.hidden=true; }
+$("sep4").onclick=()=>sepGo("htdemucs_ft");
+$("sep6").onclick=()=>sepGo("htdemucs_6s");
+$("sepCancel").onclick=()=>{ $("sepDlg").hidden=true; };
+renderSepStatus();
+dbxInit().then(ok=>{ if(!ok)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch(); });
+
+// ---- persistent memory (localStorage): survive an accidental tap-out / reload ----
+const LSKEY="sampleLoader.v1"; let saveTimer=null, restoring=false;
+function serializeSlot(s){ return {file:(SAMPLES[s.sidx]||{}).file, sidx:s.sidx, name:s.name, type:s.type, bpm:s.bpm, baseBpm:s.baseBpm, bpmManual:!!s.bpmManual, cin:s.cin, cout:s.cout, downbeat:s.downbeat, slip:s.slip||0, transpose:s.transpose||0, stretch:!!s.stretch, reverse:!!s.reverse, vol:(s.vol==null?0.9:s.vol), solo:!!s.solo, muted:!!s.muted}; }
+function resolveSidx(o){ if(o.file){ const i=SAMPLES.findIndex(s=>s.file===o.file); if(i>=0)return i; } return (o.sidx>=0&&o.sidx<SAMPLES.length)?o.sidx:0; }
+function deserializeSlot(o){ return {sidx:resolveSidx(o), name:o.name, type:o.type, bpm:o.bpm, baseBpm:o.baseBpm, bpmManual:!!o.bpmManual, cin:o.cin, cout:o.cout, downbeat:o.downbeat, slip:o.slip||0, transpose:o.transpose||0, stretch:!!o.stretch, reverse:!!o.reverse, vol:(o.vol==null?0.9:o.vol), solo:!!o.solo, muted:!!o.muted}; }
+function saveState(){ if(restoring)return; try{ const notUp=sl=>!(SAMPLES[sl.sidx]||{}).uploaded;   // uploaded samples live only in memory — don't persist slots that reference them
+   const st={ sess:($("sessName")||{}).value||"", master:($("masterBpm")||{}).value||"", clkVol:clkVol, slots:slots.filter(notUp).map(serializeSlot), committed:committed.filter(notUp).map(serializeSlot),
+    edit:(!$("crop").hidden&&cropK>=0)?{k:cropK,cropA,cropB,wPpx,wVS,vZoom,zoneMode,transSnap,cropLoopMode,clickState,expanded:waveExpanded}:null };
+   localStorage.setItem(LSKEY,JSON.stringify(st)); }catch(e){} }
+function saveSoon(){ if(restoring)return; if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(saveState,400); }
+function restoreState(){ let st; try{ st=JSON.parse(localStorage.getItem(LSKEY)||"null"); }catch(e){ st=null; }
+  restoring=true;
+  if(st){ if(st.sess&&$("sessName"))$("sessName").value=st.sess; if(st.master&&$("masterBpm"))$("masterBpm").value=st.master; if(st.clkVol!=null){ clkVol=st.clkVol; if($("clkVolR"))$("clkVolR").value=Math.round(clkVol*100); } slots=(st.slots||[]).map(deserializeSlot); committed=(st.committed||[]).map(deserializeSlot); }
+  renderSlots(); renderCommitted();
+  if(st&&st.edit&&st.edit.k>=0&&st.edit.k<slots.length){ const e=st.edit; openCropper(e.k);
+    cropA=e.cropA; cropB=e.cropB; if(e.wPpx)wPpx=e.wPpx; if(e.wVS!=null)wVS=e.wVS; vZoom=e.vZoom||1; zoneMode=!!e.zoneMode; transSnap=!!e.transSnap; cropLoopMode=e.cropLoopMode==null?1:e.cropLoopMode; clickState=e.clickState==null?1:e.clickState;
+    $("btnZone").classList.toggle("on",zoneMode); $("btnTrans").classList.toggle("on",transSnap); $("fsTrans")&&$("fsTrans").classList.toggle("on",transSnap); $("sensRow").style.display=transSnap?"":"none";
+    $("cropClk").textContent="Click: "+CLKLBL[clickState]; $("cropClk").classList.toggle("on",clickState>0); $("cropLoop").textContent="Loop: "+LOOPLBL[cropLoopMode]; $("cropLoop").classList.toggle("on",cropLoopMode>0);
+    recalcDisp(); updTranspose(); updABUI(); waveDraw(); if(e.expanded)waveExpand(true); }
+  restoring=false; }
+window.addEventListener("pagehide",saveState); window.addEventListener("beforeunload",saveState);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
+
+renderList(); restoreState(); say("Sample Loader v3.0 ready.");
+</script>

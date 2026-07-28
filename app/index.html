@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.8</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.9</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.8</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.9</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -118,7 +118,7 @@
     <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="btnMap" title="extend the selected bars as a grid across the whole file; A and B then snap to bar lines">⊞ Map</button><button id="fitBtn" title="zoom out to the whole file">⤢ Fit</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
   <div class="sub" id="waveHint" style="margin:0 0 3px">A/B/Slip on the left · none lit → pinch/zoom/move · or use Zone</div>
   <div id="waveStage">
-    <div id="waveLeft"><button id="btnA" title="move downbeat A">A</button><button id="btnB" title="move loop-end B">B</button><button id="btnSlip" title="slip the sample under A–B" hidden>Slip</button></div>
+    <div id="waveLeft"><button id="btnA" title="move downbeat A">A</button><button id="btnB" title="move loop-end B">B</button><button id="btnSlip" title="slip the sample under A–B">Slip</button></div>
     <canvas id="wave" style="height:120px;border:1px solid #8884;border-radius:8px;touch-action:none;display:block;flex:1;min-width:0"></canvas>
   </div>
   <div class="crow"><span class="lbl" id="stepTarget">Zoom</span><span class="val" id="slipVal">—</span></div>
@@ -352,8 +352,8 @@ let cropK=-1, cropSrc=null, cropT0=0, cropA=0, cropB=0, clickState=1, cropRAF=nu
 const CLKLBL=["Off","REL","ABS"];
 function ensureVisible(t,frac){ if(!wcv)return; wVS=t-(frac*wcv.width)/wPpx; }
 const LOOPLBL=["Off","A–B","Whole"];
-let aOn=false,bOn=false;
-function mode(){ return (aOn&&bOn)?"slip":aOn?"A":bOn?"B":"zoom"; }
+let aOn=false,bOn=false,slipOn=false;
+function mode(){ return slipOn?"slip":aOn?"A":bOn?"B":"zoom"; }
 function onsetsOf(sidx){ return (SAMPLES[sidx].onsets||[]).filter(o=>o[1]>=cropSens).map(o=>o[0]); }
 let transSnap=false;
 // snap a timeline position to the nearest transient (accounting for slip), when Snap is on and within ~30px
@@ -363,12 +363,12 @@ function updSensN(){ if(cropK<0)return; $("sensN").textContent=onsetsOf(slots[cr
 function syncCrop(){ const sl=slots[cropK]; if(!sl)return; sl.cin=cropA; sl.cout=cropB; sl.downbeat=cropA; saveSoon(); }
 function updReadout(){ const m=mode(),sl=slots[cropK]; if(!sl)return;
   $("slipVal").textContent = m==="A"?("A "+cropA.toFixed(3)+"s") : m==="B"?("B "+cropB.toFixed(3)+"s") : m==="slip"?(Math.round((sl.slip||0)*1000)+" ms") : "pinch to zoom"; }
-function updABUI(){ const both=aOn&&bOn; $("btnA").hidden=both; $("btnB").hidden=both; $("btnSlip").hidden=!both;   // A+B fold into one Slip button
-  $("btnA").classList.toggle("on",aOn); $("btnB").classList.toggle("on",bOn); $("btnSlip").classList.add("on"); $("fsZone").classList.toggle("on",zoneMode);
+function updABUI(){ $("btnA").hidden=false; $("btnB").hidden=false; $("btnSlip").hidden=false;
+  $("btnA").classList.toggle("on",aOn); $("btnB").classList.toggle("on",bOn); $("btnSlip").classList.toggle("on",slipOn); $("fsZone").classList.toggle("on",zoneMode);
   const m=mode(); $("stepTarget").textContent = m==="A"?"Downbeat A":m==="B"?"Loop end B":m==="slip"?"Slip":"Zoom";
   $("waveHint").textContent = zoneMode
-    ? "ZONE · touch green/orange zone → move that marker · elsewhere above center → slip · below center → pan + pinch-zoom"
-    : "A + B → Slip · none lit → pinch/zoom/move";
+    ? "ZONE · marker zones move A/B · elsewhere above center → "+(slipOn?"slip":"jump the lit marker")+" · below center → pan + pinch-zoom"
+    : "A / B jump-and-drag · Slip = slip mode · none lit → pinch/zoom/move";
   updReadout(); waveDraw(); saveSoon(); }
 // effective (heard) tempo: pitch-preserving → the target; VSO (stretch off) → transpose also scales tempo
 function effTempo(sl){ if(!sl)return 0; const base=sl.baseBpm||sl.bpm||120; const target=(sl.bpmManual? sl.bpm : base);
@@ -384,7 +384,7 @@ function recalcDisp(){ const sl=slots[cropK]; if(!sl)return;
 function recalc(){ recalcDisp(); syncCrop(); updReadout(); waveDraw(); bump(); }
 function openCropper(k){ if(playing)stopAll(); stopPrev();   // edit and audition must never sound at once
   cropK=k; const sl=slots[k]; $("cropName").textContent=sl.name;
-  cropA=(sl.downbeat!=null?sl.downbeat:sl.cin)||0; cropB=sl.cout||SAMPLES[sl.sidx].dur; aOn=false; bOn=false;
+  cropA=(sl.downbeat!=null?sl.downbeat:sl.cin)||0; cropB=sl.cout||SAMPLES[sl.sidx].dur; aOn=false; bOn=false; slipOn=false;
   zoneMode=false; $("btnZone").classList.remove("on"); $("fsZone")&&$("fsZone").classList.remove("on");   // default: pinch/zoom/move, nothing lit
   transSnap=false; $("btnTrans").classList.remove("on"); $("fsTrans")&&$("fsTrans").classList.remove("on"); $("sensRow").style.display="none";
   mapOn=false; mapGrid=null; $("btnMap").classList.remove("on"); $("fsMap")&&$("fsMap").classList.remove("on"); $("bars").disabled=false;
@@ -467,7 +467,10 @@ function wxy(e){ const r=$("wave").getBoundingClientRect(); return {x:e.clientX-
       if(canPinch){ wpinch={d0:Math.abs(a[0].x-a[1].x)||1,ppx0:wPpx,cx,cxT:wVS+cx/wPpx}; } wdrag=null; return; }
     const sl=slots[cropK]; let act;
     if(zoneMode){ if(p.y>=wcv.height/2){ act="pan"; }
-      else { act=zoneAct(p.x); if(act==="A"){aOn=true;bOn=false;} else if(act==="B"){aOn=false;bOn=true;} else {aOn=true;bOn=true;} updABUI(); } }
+      else { const z=zoneAct(p.x);
+        if(z==="A"){ act="A"; aOn=true;bOn=false;slipOn=false; updABUI(); }
+        else if(z==="B"){ act="B"; aOn=false;bOn=true;slipOn=false; updABUI(); }
+        else { act = slipOn?"slip":(aOn?"A":bOn?"B":"pan"); } } }
     else act=actAt(p);
     if(act==="A"||act==="B"||act==="slip")snap();
     if(act==="A") wdrag={t:"A",x0:p.x,v0:cropA,lastX:p.x,moved:false}; else if(act==="B") wdrag={t:"B",x0:p.x,v0:cropB,lastX:p.x,moved:false}; else if(act==="slip") wdrag={t:"slip",x0:p.x,v0:sl.slip||0}; else if(act==="pan") wdrag={t:"pan",x0:p.x,v0:wVS}; else wdrag=null; });
@@ -492,9 +495,9 @@ function wxy(e){ const r=$("wave").getBoundingClientRect(); return {x:e.clientX-
         if(mapOn&&(w.t==="A"||w.t==="B")) say(mapCount()+" bars selected."); } } }
   c.addEventListener("pointerup",up); c.addEventListener("pointercancel",up); })();
 function abView(){ const m=mode(); if(m==="slip"||m==="A")ensureVisible(cropA,0.28); else if(m==="B")ensureVisible(cropB,0.72); }
-$("btnA").onclick=()=>{ aOn=!aOn; abView(); updABUI(); };
-$("btnB").onclick=()=>{ bOn=!bOn; abView(); updABUI(); };
-$("btnSlip").onclick=()=>{ aOn=false; bOn=false; updABUI(); };   // tap Slip → back to A/B, nothing lit = zoom/move
+$("btnA").onclick=()=>{ aOn=!aOn; if(aOn){bOn=false;slipOn=false;} abView(); updABUI(); };
+$("btnB").onclick=()=>{ bOn=!bOn; if(bOn){aOn=false;slipOn=false;} abView(); updABUI(); };
+$("btnSlip").onclick=()=>{ slipOn=!slipOn; if(slipOn){aOn=false;bOn=false;} updABUI(); };
 $("btnZone").onclick=()=>{ zoneMode=!zoneMode; if(!zoneMode){ aOn=false; bOn=false; } $("btnZone").classList.toggle("on",zoneMode); updABUI(); };
 window.addEventListener("resize",()=>{ if(waveExpanded)waveResize(); else if(!$("crop").hidden)waveFit(); });
 function waveWhole(){ const sl=slots[cropK]; if(!sl||!wcv)return; const fdur=SAMPLES[sl.sidx].dur||1;
@@ -892,9 +895,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v3.8 ready.");
+say("Sample Loader v3.9 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.8."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.8 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.9."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.9 ready."); },{once:true});
 </script>

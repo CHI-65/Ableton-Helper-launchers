@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v4.2</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v4.3</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.2</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.3</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -62,7 +62,7 @@
  <div id="list" class="list" aria-label="Sample list"></div>
 
  <div class="panel">
-   <div class="row"><b>Audition slots (up to 6)</b><span style="flex:1"></span>
+   <div class="row"><b>Audition slots (up to 6)</b><button id="qUndo" title="undo the last removal">↶ Undo</button><span style="flex:1"></span>
      <button id="playAll">▶ Play + Click</button>
      <button id="clickBtn" class="on">Click: ON</button>
      <button id="send" disabled>Send to session →</button></div>
@@ -220,7 +220,7 @@ $("folderIn").onchange=e=>{ addFiles(e.target.files,{dialogIfSingle:false}); e.t
 
 // ---- sample list ----
 function renderList(){ const L=$("list"); L.innerHTML="";
-  const TINTS={blue:"rgba(58,122,254,.16)",green:"rgba(52,199,89,.16)",red:"rgba(255,69,58,.16)"};
+  const TINTS={blue:"rgba(58,122,254,.16)",purple:"rgba(175,82,222,.18)",teal:"rgba(48,176,199,.18)",orange:"rgba(255,159,10,.20)",green:"rgba(52,199,89,.16)",red:"rgba(255,69,58,.16)"};
   SAMPLES.forEach((s,i)=>{ const d=document.createElement("div"); d.className="item";
     if(s.tint&&TINTS[s.tint])d.style.background=TINTS[s.tint];
     d.innerHTML='<button class="sq aud" title="Audition">▶</button><span class="nm">'+s.name+'</span>'+
@@ -260,9 +260,15 @@ $("dlgClk").onchange=e=>{ audClickOn=e.target.checked;
 $("dlgType").onclick=()=>{ dlgType=dlgType==="loop"?"oneshot":"loop"; $("dlgType").textContent="Type: "+(dlgType==="loop"?"Loop":"One-shot"); $("dlgEdit").style.display=dlgType==="loop"?"":"none"; };
 $("dlgAud").onclick=()=>auditionOne(dlgIdx,null,parseFloat($("dlgBpm").value));
 $("dlgCancel").onclick=()=>{ stopPrev(); $("dlg").hidden=true; };
-$("dlgAccept").onclick=()=>{ const s=SAMPLES[dlgIdx]; const k=addSlot(dlgIdx,dlgType,parseFloat($("dlgBpm").value)||120,{cin:0,cout:s.dur,downbeat:0}); stopPrev(); $("dlg").hidden=true; if(k>=0&&playing)addLoopLive(slots[k]); };
+$("dlgAccept").onclick=()=>{ const s=SAMPLES[dlgIdx]; const bv=parseFloat($("dlgBpm").value)||120;
+  const k=addSlot(dlgIdx,dlgType,bv,{cin:0,cout:s.dur,downbeat:0}); stopPrev(); $("dlg").hidden=true;
+  if(dlgType==="loop")propagateStemTempo(s,bv);
+  if(k>=0&&playing)addLoopLive(slots[k]); };
 $("dlgEdit").onclick=()=>{ const s=SAMPLES[dlgIdx]; const k=addSlot(dlgIdx,dlgType,parseFloat($("dlgBpm").value)||120,{cin:0,cout:s.dur,downbeat:0}); stopPrev(); $("dlg").hidden=true; if(k>=0)openCropper(k); };
 function sessTempoGuess(){ const t=allTempos(); return t.length? t[0]:120; }
+function propagateStemTempo(smp,bpm){ if(!smp||!smp.stemOf||!(bpm>0))return; let n=0;
+  for(const t of SAMPLES){ if(t!==smp&&t.stemOf===smp.stemOf&&t.bpm==null){ t.bpm=+bpm.toFixed(2); n++; } }
+  if(n){ renderList(); say("Tempo "+bpm.toFixed(2)+" set as the default for "+n+" more stems of "+smp.stemOf+"."); } }
 
 // ---- audition slots ----
 function addSlot(i,type,bpm,crop){ if(slots.length>=6){ alert("6 slots are full — Send to session to free them."); return -1; }
@@ -291,7 +297,7 @@ function renderSlots(){ const box=$("slots"); box.innerHTML=""; if(!slots.length
     d.querySelector(".m").onclick=e=>{sl.muted=!sl.muted;e.target.classList.toggle("on",sl.muted);applyGains();};
     d.querySelector(".vol").oninput=e=>{ sl.vol=+e.target.value/100; applyGains(); saveSoon(); };
     if(sl.type==="loop")d.querySelector(".ed").onclick=()=>openReDlg(k);
-    d.querySelector(".rm").onclick=()=>{ const rem=slots[k]; slots.splice(k,1);
+    d.querySelector(".rm").onclick=()=>{ const rem=slots[k]; qUndoPush({kind:"slot",item:rem,idx:k}); slots.splice(k,1);
       const i=slotSrcs.findIndex(o=>o.sl===rem); if(i>=0){ try{slotSrcs[i].src.stop();}catch(e){} slotSrcs.splice(i,1); }   // stop just this loop, leave the rest playing
       renderSlots(); if(playing&&!slotSrcs.length)stopAll(); else applyGains(); };
     enableRename(d.querySelector(".nm"),sl);
@@ -647,6 +653,7 @@ async function bakeRender(sl){ const buf=await getBuf(sl.sidx); const off=sl.sli
   if(sl.reverse) out=revRegion(out,0,out.duration);
   return out; }
 $("cropDone").onclick=async()=>{ const sl=slots[cropK]; if(waveExpanded)waveExpand(false);
+  if(sl){ const smp=SAMPLES[sl.sidx]; const tb=sl.bpm||sl.baseBpm; if(smp&&smp.stemOf&&tb){ if(smp.bpm==null)smp.bpm=+tb.toFixed(2); propagateStemTempo(smp,+tb); } }
   if(hasMods(sl)){ $("cropDone").textContent="rendering…"; $("cropDone").disabled=true; try{ const b=await bakeRender(sl); sl.renderBuf=b; sl.renderDur=b.duration; }catch(e){ sl.renderBuf=null; } $("cropDone").disabled=false; }
   else { sl.renderBuf=null; sl.renderDur=0; }
   stopCrop(); if(cropRAF)cancelAnimationFrame(cropRAF); $("crop").hidden=true; renderSlots(); };
@@ -661,7 +668,12 @@ function renderCommitted(){ const box=$("committed"); box.innerHTML="";
     const x=document.createElement("button"); x.className="chipx"; x.textContent="×"; x.title="remove from session"; x.onclick=()=>removeCommitted(i); c.appendChild(x);
     box.appendChild(c); });
   $("create").disabled = !(committed.length||slots.length); saveSoon(); }
-function removeCommitted(i){ committed.splice(i,1); renderCommitted(); }
+function removeCommitted(i){ qUndoPush({kind:"comm",item:committed[i],idx:i}); committed.splice(i,1); renderCommitted(); }
+const qUndoStack=[];
+function qUndoPush(a){ qUndoStack.push(a); if(qUndoStack.length>10)qUndoStack.shift(); }
+$("qUndo").onclick=()=>{ const a=qUndoStack.pop(); if(!a){ say("Nothing to undo."); return; }
+  if(a.kind==="slot"){ slots.splice(Math.min(a.idx,slots.length),0,a.item); renderSlots(); say("Restored "+(a.item.name||"slot")+" to the audition slots.",true); }
+  else { committed.splice(Math.min(a.idx,committed.length),0,a.item); renderCommitted(); say("Restored "+(a.item.name||"sample")+" to the session.",true); } };
 function allItems(){ return committed.concat(slots); }
 function allTempos(){ const t=[...new Set(allItems().filter(s=>s.type==="loop").map(s=>Math.round(s.bpm)))]; t.sort((a,b)=>a-b); return t; }
 function sessTempoNow(){ const t=allTempos(); return t.length? t[0]:120; }
@@ -903,6 +915,11 @@ function sepWatch(){ if(!Object.keys(sepState.pending).length)return;
     const tick=async()=>{ if(!Object.keys(sepState.pending).length){ clearInterval(daxPoll); daxPoll=null; return; }
       try{ const r=await daxRpc("files/list_folder",{path:SEP_DIR}); sepHit((r.entries||[]).map(e=>e.name)); }catch(e){} };
     daxPoll=setInterval(tick,30000); tick(); } }
+const SEP_PAL=["blue","purple","teal","orange"];
+function sepColorFor(id){ sepState.colors=sepState.colors||{};
+  if(!sepState.colors[id]){ const used=Object.values(sepState.colors);
+    sepState.colors[id]=SEP_PAL.find(c=>used.indexOf(c)<0)||SEP_PAL[Object.keys(sepState.colors).length%SEP_PAL.length]; sepSave(); }
+  return sepState.colors[id]; }
 async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id);
   const pen=sepState.ready[id]; if(!pen)return;
   const grab = (DBX&&window.claude&&window.claude.mcp)
@@ -913,7 +930,7 @@ async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id)
     for(const st of (man&&man.stems)||[]){ const pj=await grab(st.json);
       let buf; try{ buf=await AC.decodeAudioData(b64buf(pj.b64)); }catch(e){ continue; }
       SAMPLES.push({file:st.file,name:pen.name+" · "+st.role,dur:+buf.duration.toFixed(3),frames:buf.length,
-        bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name,tint:"blue"}); added++; }
+        bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name,tint:sepColorFor(id)}); added++; }
     if(added){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say(added+" stems from "+pen.name+" are now in the sample list.",true); tryRestorePending(false); }
     else{ sepIngested.delete(id); say("Stems for "+pen.name+" arrived but couldn't be read — tell Claude."); }
     if(!Object.keys(sepState.pending).length&&sepWatchOff){ sepWatchOff(); sepWatchOff=null; }
@@ -1004,9 +1021,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v4.2 ready.");
+say("Sample Loader v4.3 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.2."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.2 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.3."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.3 ready."); },{once:true});
 </script>

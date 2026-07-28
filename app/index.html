@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v4.0</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v4.1</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.0</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.1</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -192,7 +192,11 @@ async function decodeAndAdd(file){ ensureAudio(); if(!AUDIO_RX.test(file.name))r
   const name=file.name.replace(/\.[^.]+$/,""); let buf;
   try{ buf=await AC.decodeAudioData(await file.arrayBuffer()); }catch(e){ return -2; }        // couldn't decode in-browser
   const s={file:file.name,name,dur:+buf.duration.toFixed(3),frames:buf.length,bpm:bpmFromName(file.name),onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true};
-  SAMPLES.push(s); return SAMPLES.length-1; }
+  SAMPLES.push(s);
+  if(typeof daxState==="function"&&daxState()){ file.arrayBuffer()
+    .then(ab=>daxUp("/SampleLoader/uploads/"+file.name,ab))
+    .then(()=>{ s.dbxPath="/sampleloader/uploads/"+file.name.toLowerCase(); saveSoon(); }).catch(()=>{}); }
+  return SAMPLES.length-1; }
 async function addFiles(fileList,opts){ let files=[...(fileList||[])].filter(f=>AUDIO_RX.test(f.name)); if(!files.length){ alert("No audio files found there."); return; }
   const LIMIT=60; if(files.length>LIMIT){ alert("That has "+files.length+" audio files — loading the first "+LIMIT+"; add the rest later."); files=files.slice(0,LIMIT); }
   let added=0,failed=0,lastIdx=-1;
@@ -274,6 +278,7 @@ function renderSlots(){ const box=$("slots"); box.innerHTML=""; if(!slots.length
       (sl.type==="loop"?'<button class="editbtn ed">✎ Edit</button>':'<span></span>')+
       '<button class="sq rm">×</button>'+
       '<label class="vrow" style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:2px"><span class="sub" style="min-width:26px">Vol</span><input type="range" class="vol" min="0" max="100" value="'+Math.round((sl.vol==null?0.9:sl.vol)*100)+'" style="flex:1"></label>';
+    d.querySelector(".s").classList.toggle("on",!!sl.solo); d.querySelector(".m").classList.toggle("on",!!sl.muted);
     d.querySelector(".s").onclick=e=>{sl.solo=!sl.solo;e.target.classList.toggle("on",sl.solo);applyGains();};
     d.querySelector(".m").onclick=e=>{sl.muted=!sl.muted;e.target.classList.toggle("on",sl.muted);applyGains();};
     d.querySelector(".vol").oninput=e=>{ sl.vol=+e.target.value/100; applyGains(); saveSoon(); };
@@ -761,6 +766,15 @@ const FKEY="sampleLoader.folders";
 let srcFolders=(()=>{ try{ const v=JSON.parse(localStorage.getItem(FKEY)||"[null,null]"); return Array.isArray(v)?v:[null,null]; }catch(e){ return [null,null]; } })();
 function fldSave(){ try{ localStorage.setItem(FKEY,JSON.stringify(srcFolders)); }catch(e){} }
 const AUD_RX2=/\.(wav|mp3|m4a|aif|aiff|flac|ogg)$/i;
+async function loadUploads(){ if(!daxState())return;
+  try{ const r=await daxRpc("files/list_folder",{path:"/SampleLoader/uploads"}); let n=0;
+    for(const e of (r.entries||[])){ if(e[".tag"]!=="file")continue;
+      if(SAMPLES.some(s=>s.dbxPath===e.path_lower||s.file===e.name))continue; if(n>=60)break;
+      SAMPLES.push({file:e.name,name:e.name.replace(/\.[^.]+$/,""),dur:0,frames:0,bpm:bpmFromName(e.name),
+        onsets:[],peaks:[],uploaded:true,dbxPath:e.path_lower}); n++; }
+    if(n){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; }
+    tryRestorePending(false);
+  }catch(e){} }
 async function loadFolder(slot){ const f=srcFolders[slot]; if(!f||!daxState())return;
   try{ const r=await daxRpc("files/list_folder",{path:f.path}); let n=0;
     for(const e of (r.entries||[])){ if(e[".tag"]!=="file"||!AUD_RX2.test(e.name))continue;
@@ -769,6 +783,7 @@ async function loadFolder(slot){ const f=srcFolders[slot]; if(!f||!daxState())re
         onsets:[],peaks:[],uploaded:true,dbxPath:e.path_lower,tint:f.color}); n++; }
     renderList(); $("cnt").textContent=SAMPLES.length+" samples";
     if(n)say(n+" samples added from "+(f.path.split("/").pop()||"Dropbox")+".");
+    tryRestorePending(false);
   }catch(e){ say("Couldn't load folder "+f.path+"."); } }
 function fldUI(){ const map=[["fld2Btn","fld2Lbl","fld2X",0],["fld3Btn","fld3Lbl","fld3X",1]];
   for(const [b,l,xb,k] of map){ const f=srcFolders[k]; $(l).textContent=f?f.path:""; $(xb).hidden=!f; } }
@@ -845,7 +860,7 @@ async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id)
       let buf; try{ buf=await AC.decodeAudioData(b64buf(pj.b64)); }catch(e){ continue; }
       SAMPLES.push({file:st.file,name:pen.name+" · "+st.role,dur:+buf.duration.toFixed(3),frames:buf.length,
         bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name,tint:"blue"}); added++; }
-    if(added){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say(added+" stems from "+pen.name+" are now in the sample list.",true); }
+    if(added){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say(added+" stems from "+pen.name+" are now in the sample list.",true); tryRestorePending(false); }
     else{ sepIngested.delete(id); say("Stems for "+pen.name+" arrived but couldn't be read — tell Claude."); }
     if(!Object.keys(sepState.pending).length&&sepWatchOff){ sepWatchOff(); sepWatchOff=null; }
   }catch(e){ sepIngested.delete(id);
@@ -890,21 +905,38 @@ daxBoot().then(()=>{ (async()=>{ let any=false;
   if(window.claude&&window.claude.mcp&&await dbxInit())any=true;
   else if(daxState()){ try{ await daxToken(); any=true; }catch(e){} }
   if(!any)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch();
-  loadFolder(0); loadFolder(1); })(); });
+  loadFolder(0); loadFolder(1); loadUploads();
+  setTimeout(()=>tryRestorePending(true),7000); })(); });
 
 // ---- persistent memory (localStorage): survive an accidental tap-out / reload ----
-const LSKEY="sampleLoader.v1"; let saveTimer=null, restoring=false;
-function serializeSlot(s){ return {file:(SAMPLES[s.sidx]||{}).file, sidx:s.sidx, name:s.name, type:s.type, bpm:s.bpm, baseBpm:s.baseBpm, bpmManual:!!s.bpmManual, cin:s.cin, cout:s.cout, downbeat:s.downbeat, slip:s.slip||0, transpose:s.transpose||0, stretch:!!s.stretch, reverse:!!s.reverse, vol:(s.vol==null?0.9:s.vol), solo:!!s.solo, muted:!!s.muted}; }
-function resolveSidx(o){ if(o.file){ const i=SAMPLES.findIndex(s=>s.file===o.file); if(i>=0)return i; } return (o.sidx>=0&&o.sidx<SAMPLES.length)?o.sidx:0; }
+const LSKEY="sampleLoader.v1"; let saveTimer=null, restoring=false; const pendingSlots=[];
+function tryRestorePending(create){ if(!pendingSlots.length)return; let changed=false;
+  for(let k=pendingSlots.length-1;k>=0;k--){ const it=pendingSlots[k]; let i=resolveSidx(it.o);
+    if(i<0&&create&&it.o.dbxPath){ SAMPLES.push({file:it.o.file,name:it.o.sname||(it.o.file||"sample").replace(/\.[^.]+$/,""),dur:0,frames:0,
+      bpm:null,onsets:[],peaks:[],uploaded:true,dbxPath:it.o.dbxPath,tint:it.o.tint}); i=SAMPLES.length-1; }
+    if(i>=0){ const d=deserializeSlot(it.o); d.sidx=i; (it.target==="slots"?slots:committed).push(d); pendingSlots.splice(k,1); changed=true; } }
+  if(changed){ renderList(); renderSlots(); renderCommitted(); $("cnt").textContent=SAMPLES.length+" samples"; say("Restored your saved edits."); } }
+function serializeSlot(s){ const smp=SAMPLES[s.sidx]||{};
+  return {file:smp.file, dbxPath:smp.dbxPath, tint:smp.tint, stemOf:smp.stemOf, sname:smp.name,
+    sidx:s.sidx, name:s.name, type:s.type, bpm:s.bpm, baseBpm:s.baseBpm, bpmManual:!!s.bpmManual, cin:s.cin, cout:s.cout, downbeat:s.downbeat, slip:s.slip||0, transpose:s.transpose||0, stretch:!!s.stretch, reverse:!!s.reverse, vol:(s.vol==null?0.9:s.vol), solo:!!s.solo, muted:!!s.muted}; }
+function resolveSidx(o){ if(o.file){ const i=SAMPLES.findIndex(s=>s.file===o.file); if(i>=0)return i; }
+  if(o.dbxPath){ const i=SAMPLES.findIndex(s=>s.dbxPath===o.dbxPath); if(i>=0)return i; }
+  if(!o.dbxPath&&!o.stemOf&&o.sidx>=0&&o.sidx<SAMPLES.length&&!SAMPLES[o.sidx].uploaded)return o.sidx;
+  return -1; }
 function deserializeSlot(o){ return {sidx:resolveSidx(o), name:o.name, type:o.type, bpm:o.bpm, baseBpm:o.baseBpm, bpmManual:!!o.bpmManual, cin:o.cin, cout:o.cout, downbeat:o.downbeat, slip:o.slip||0, transpose:o.transpose||0, stretch:!!o.stretch, reverse:!!o.reverse, vol:(o.vol==null?0.9:o.vol), solo:!!o.solo, muted:!!o.muted}; }
-function saveState(){ if(restoring)return; try{ const notUp=sl=>!(SAMPLES[sl.sidx]||{}).uploaded;   // uploaded samples live only in memory — don't persist slots that reference them
-   const st={ sess:($("sessName")||{}).value||"", master:($("masterBpm")||{}).value||"", clkVol:clkVol, slots:slots.filter(notUp).map(serializeSlot), committed:committed.filter(notUp).map(serializeSlot),
+function saveState(){ if(restoring)return; try{ const keep=sl=>{ const smp=SAMPLES[sl.sidx]||{}; return !smp.uploaded||smp.dbxPath||smp.stemOf; };
+   const st={ sess:($("sessName")||{}).value||"", master:($("masterBpm")||{}).value||"", clkVol:clkVol, slots:slots.filter(keep).map(serializeSlot), committed:committed.filter(keep).map(serializeSlot),
     edit:(!$("crop").hidden&&cropK>=0)?{k:cropK,cropA,cropB,wPpx,wVS,vZoom,zoneMode,transSnap,cropLoopMode,clickState,expanded:waveExpanded}:null };
    localStorage.setItem(LSKEY,JSON.stringify(st)); }catch(e){} }
 function saveSoon(){ if(restoring)return; if(saveTimer)clearTimeout(saveTimer); saveTimer=setTimeout(saveState,400); }
 function restoreState(){ let st; try{ st=JSON.parse(localStorage.getItem(LSKEY)||"null"); }catch(e){ st=null; }
   restoring=true;
-  if(st){ if(st.sess&&$("sessName"))$("sessName").value=st.sess; if(st.master&&$("masterBpm"))$("masterBpm").value=st.master; if(st.clkVol!=null){ clkVol=st.clkVol; if($("clkVolR"))$("clkVolR").value=Math.round(clkVol*100); } slots=(st.slots||[]).map(deserializeSlot); committed=(st.committed||[]).map(deserializeSlot); }
+  if(st){ if(st.sess&&$("sessName"))$("sessName").value=st.sess; if(st.master&&$("masterBpm"))$("masterBpm").value=st.master; if(st.clkVol!=null){ clkVol=st.clkVol; if($("clkVolR"))$("clkVolR").value=Math.round(clkVol*100); }
+    const take=(arr,target)=>{ const out=[]; for(const o of (arr||[])){ const i=resolveSidx(o);
+        if(i>=0){ const d=deserializeSlot(o); d.sidx=i; out.push(d); }
+        else if(o.dbxPath||o.stemOf) pendingSlots.push({o:o,target:target}); }
+      return out; };
+    slots=take(st.slots,"slots"); committed=take(st.committed,"committed"); }
   renderSlots(); renderCommitted();
   if(st&&st.edit&&st.edit.k>=0&&st.edit.k<slots.length){ const e=st.edit; openCropper(e.k);
     cropA=e.cropA; cropB=e.cropB; if(e.wPpx)wPpx=e.wPpx; if(e.wVS!=null)wVS=e.wVS; vZoom=e.vZoom||1; zoneMode=!!e.zoneMode; transSnap=!!e.transSnap; cropLoopMode=e.cropLoopMode==null?1:e.cropLoopMode; clickState=e.clickState==null?1:e.clickState;
@@ -916,9 +948,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v4.0 ready.");
+say("Sample Loader v4.1 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.0."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.0 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.1."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.1 ready."); },{once:true});
 </script>

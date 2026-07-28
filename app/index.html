@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.7</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.8</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.7</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.8</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -115,7 +115,7 @@
   <div class="crow"><span class="lbl">Tempo</span><span class="steps" style="grid-column:2/4;justify-content:flex-start;align-items:center"><button id="tempoDown" title="tempo down">◀</button><span class="val" id="cropBpm" title="long-press to type a tempo" style="min-width:118px;text-align:center">tempo —</span><button id="tempoUp" title="tempo up">▶</button><button id="tempoReset" title="reset to detected tempo">↺</button></span></div>
 
   <div class="row" style="margin-top:6px"><button class="big cplay">▶ Play</button><button id="btnZone" title="zone mode: touch a shaded zone to move that marker, elsewhere above center = slip, below center = pan/zoom">▦ Zone</button>
-    <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="fitBtn" title="zoom out to the whole file">⤢ Fit</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
+    <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="btnMap" title="extend the selected bars as a grid across the whole file; A and B then snap to bar lines">⊞ Map</button><button id="fitBtn" title="zoom out to the whole file">⤢ Fit</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
   <div class="sub" id="waveHint" style="margin:0 0 3px">A/B/Slip on the left · none lit → pinch/zoom/move · or use Zone</div>
   <div id="waveStage">
     <div id="waveLeft"><button id="btnA" title="move downbeat A">A</button><button id="btnB" title="move loop-end B">B</button><button id="btnSlip" title="slip the sample under A–B" hidden>Slip</button></div>
@@ -133,7 +133,7 @@
   <div id="waveFSbar">
     <button class="big cplay">▶ Play</button>
     <button id="fsZone" title="zone mode">▦ Zone</button>
-    <button id="fsTrans" title="transient snap">⌁ Snap</button>
+    <button id="fsTrans" title="transient snap">⌁ Snap</button><button id="fsMap" title="bar map">⊞ Map</button>
     <button id="fsFit">⤢ Fit</button><button id="fsUndo" class="big">↶ Undo</button>
     <span class="val" id="fsInfo" style="flex:1;text-align:center;font-size:14px">—</span>
     <button id="waveClose" class="big">✕ Close</button>
@@ -376,14 +376,18 @@ function effTempo(sl){ if(!sl)return 0; const base=sl.baseBpm||sl.bpm||120; cons
 function updTempoDisp(){ const sl=slots[cropK]; if(!sl)return; const bars=parseInt($("bars").value)||1; const eff=effTempo(sl);
   const vso=!sl.stretch && ((sl.transpose||0)!==0 || (!!sl.bpmManual && Math.abs((sl.bpm||0)-(sl.baseBpm||sl.bpm||0))>1e-6));
   $("cropBpm").textContent=(eff?eff.toFixed(2):"—")+" bpm"+(sl.bpmManual?" ✎":"")+(vso?" ⤢vso":"");
-  $("baseBpm").textContent="detected "+((sl.baseBpm||sl.bpm)?(sl.baseBpm||sl.bpm).toFixed(2):"—")+" @ "+bars+"bar"; updDoneBtn(); saveSoon(); }
-function recalcDisp(){ const sl=slots[cropK]; if(!sl)return; if(cropB>cropA){ const bars=parseInt($("bars").value),base=bars*4*60/(cropB-cropA); sl.baseBpm=base; if(!sl.bpmManual)sl.bpm=base; sl.downbeat=cropA; } updTempoDisp(); }
+  if(mapOn&&mapGrid) $("baseBpm").textContent="mapped: "+mapCount()+" bars selected";
+  else $("baseBpm").textContent="detected "+((sl.baseBpm||sl.bpm)?(sl.baseBpm||sl.bpm).toFixed(2):"—")+" @ "+bars+"bar"; updDoneBtn(); saveSoon(); }
+function recalcDisp(){ const sl=slots[cropK]; if(!sl)return;
+  if(mapOn&&mapGrid){ sl.downbeat=cropA; updTempoDisp(); return; }
+  if(cropB>cropA){ const bars=parseInt($("bars").value),base=bars*4*60/(cropB-cropA); sl.baseBpm=base; if(!sl.bpmManual)sl.bpm=base; sl.downbeat=cropA; } updTempoDisp(); }
 function recalc(){ recalcDisp(); syncCrop(); updReadout(); waveDraw(); bump(); }
 function openCropper(k){ if(playing)stopAll(); stopPrev();   // edit and audition must never sound at once
   cropK=k; const sl=slots[k]; $("cropName").textContent=sl.name;
   cropA=(sl.downbeat!=null?sl.downbeat:sl.cin)||0; cropB=sl.cout||SAMPLES[sl.sidx].dur; aOn=false; bOn=false;
   zoneMode=false; $("btnZone").classList.remove("on"); $("fsZone")&&$("fsZone").classList.remove("on");   // default: pinch/zoom/move, nothing lit
   transSnap=false; $("btnTrans").classList.remove("on"); $("fsTrans")&&$("fsTrans").classList.remove("on"); $("sensRow").style.display="none";
+  mapOn=false; mapGrid=null; $("btnMap").classList.remove("on"); $("fsMap")&&$("fsMap").classList.remove("on"); $("bars").disabled=false;
   $("cropLoop").textContent="Loop: "+LOOPLBL[cropLoopMode]; $("cropLoop").classList.toggle("on",cropLoopMode>0);
   clickOn=clickState>0; $("cropClk").textContent="Click: "+CLKLBL[clickState]; $("cropClk").classList.toggle("on",clickState>0);
   $("sens").value=Math.round((cropSens-0.03)/0.7*100); updSensN(); recalcDisp(); updABUI();
@@ -439,6 +443,13 @@ function waveDraw(){ if(!wctx||cropK<0)return; const sl=slots[cropK],S=SAMPLES[s
     wctx.fillStyle="rgba(255,149,0,0.16)"; wctx.fillRect(zB-ZONE_PX,0,2*ZONE_PX,h/2);
     wctx.fillStyle="rgba(120,120,120,0.12)"; wctx.fillRect(0,h/2,w,h/2);
     wctx.save(); wctx.strokeStyle="#8886"; wctx.setLineDash([5,4]); wctx.lineWidth=1; wctx.beginPath(); wctx.moveTo(0,h/2); wctx.lineTo(w,h/2); wctx.stroke(); wctx.restore(); }
+  if(mapOn&&mapGrid){ const bl=mapGrid.barLen, a=mapGrid.anchor;
+    let k=Math.ceil((wVS-a)/bl); const kmax=k+Math.ceil(w/(bl*wPpx))+1; let drawn=0;
+    wctx.save();
+    for(;k<=kmax&&drawn<500;k++,drawn++){ const t=a+k*bl; if(t<0||t>dur)continue; const gx=(t-wVS)*wPpx;
+      wctx.strokeStyle=(k%4===0)?"rgba(175,82,222,0.5)":"rgba(175,82,222,0.22)"; wctx.lineWidth=(k%4===0)?1.6:1;
+      wctx.beginPath(); wctx.moveTo(gx,0); wctx.lineTo(gx,h); wctx.stroke(); }
+    wctx.restore(); }
   wctx.strokeStyle="#79a8d8"; wctx.globalAlpha=.6; wctx.beginPath(); const bd=dur/(P.length||1);
   for(let i=0;i<P.length;i++){ const t=i*bd,x=(t-off-wVS)*wPpx; if(x<-2)continue; if(x>w+2)break; const a=Math.min(h*0.48,P[i]/100*(h*0.45)*vZoom); wctx.moveTo(x,h/2-a); wctx.lineTo(x,h/2+a); }
   wctx.stroke(); wctx.globalAlpha=1;
@@ -467,17 +478,18 @@ function wxy(e){ const r=$("wave").getBoundingClientRect(); return {x:e.clientX-
       wPpx=Math.max(minP,Math.min(8000,wpinch.ppx0*d/wpinch.d0)); wVS=wpinch.cxT-wpinch.cx/wPpx; waveDraw(); } return; }
     if(!wdrag)return; const dx=(p.x-wdrag.x0)/wPpx, sl=slots[cropK], dur=SAMPLES[sl.sidx].dur;
     wdrag.lastX=p.x; if(Math.abs(p.x-wdrag.x0)>6)wdrag.moved=true;
-    if(wdrag.t==="A"){ cropA=Math.max(0,Math.min(cropB-0.02,snapT(wdrag.v0+dx))); recalcDisp(); }
-    else if(wdrag.t==="B"){ cropB=Math.max(cropA+0.02,Math.min(dur,snapT(wdrag.v0+dx))); recalcDisp(); }
+    if(wdrag.t==="A"){ const nt=mapOn?mapSnap(wdrag.v0+dx):snapT(wdrag.v0+dx); cropA=Math.max(0,Math.min(cropB-0.02,nt)); recalcDisp(); }
+    else if(wdrag.t==="B"){ const nt=mapOn?mapSnap(wdrag.v0+dx):snapT(wdrag.v0+dx); cropB=Math.max(cropA+0.02,Math.min(dur,nt)); recalcDisp(); }
     else if(wdrag.t==="slip"){ sl.slip=wdrag.v0-dx; }
     else if(wdrag.t==="pan"){ wVS=wdrag.v0-dx; }
     updReadout(); waveDraw(); });
   function up(e){ wptrs.delete(e.pointerId); if(wpinch&&wptrs.size<2)wpinch=null;
     if(wptrs.size===0&&wdrag){ const w=wdrag; wdrag=null; const sl=slots[cropK], dur=sl?SAMPLES[sl.sidx].dur:0;
-      if((w.t==="A"||w.t==="B")&&!w.moved){ const tt=snapT(wVS+w.lastX/wPpx);   // tap = jump the lit marker here
+      if((w.t==="A"||w.t==="B")&&!w.moved){ const tt=mapOn?mapSnap(wVS+w.lastX/wPpx):snapT(wVS+w.lastX/wPpx);   // tap = jump the lit marker here
         if(w.t==="A") cropA=Math.max(0,Math.min(cropB-0.02,tt)); else cropB=Math.max(cropA+0.02,Math.min(dur,tt));
         recalcDisp(); updReadout(); waveDraw(); }
-      if(w.t==="A"||w.t==="B"||w.t==="slip"){ syncCrop(); bump(); } } }
+      if(w.t==="A"||w.t==="B"||w.t==="slip"){ syncCrop(); bump();
+        if(mapOn&&(w.t==="A"||w.t==="B")) say(mapCount()+" bars selected."); } } }
   c.addEventListener("pointerup",up); c.addEventListener("pointercancel",up); })();
 function abView(){ const m=mode(); if(m==="slip"||m==="A")ensureVisible(cropA,0.28); else if(m==="B")ensureVisible(cropB,0.72); }
 $("btnA").onclick=()=>{ aOn=!aOn; abView(); updABUI(); };
@@ -505,6 +517,20 @@ $("bars").onchange=()=>{ const sl=slots[cropK]; if(!sl){recalcDisp();return;} sn
   updTempoDisp(); syncCrop(); updReadout(); waveDraw(); if(cropSrc)bump(); };
 $("sens").oninput=e=>{ cropSens=0.03+(e.target.value/100)*0.7; updSensN(); waveDraw(); };
 $("btnTrans").onclick=()=>{ transSnap=!transSnap; $("btnTrans").classList.toggle("on",transSnap); $("fsTrans")&&$("fsTrans").classList.toggle("on",transSnap); $("sensRow").style.display=transSnap?"":"none"; if(transSnap)updSensN(); waveDraw(); };
+// ---- Map mode: bar grid stamped across the whole file, A/B snap to it ----
+let mapOn=false, mapGrid=null;
+function mapSnap(t){ if(!mapGrid)return t; const k=Math.round((t-mapGrid.anchor)/mapGrid.barLen); return mapGrid.anchor+k*mapGrid.barLen; }
+function mapCount(){ return mapGrid?Math.max(1,Math.round((cropB-cropA)/mapGrid.barLen)):0; }
+function mapToggle(){ const sl=slots[cropK]; if(!sl)return;
+  if(!mapOn){ const bars=parseInt($("bars").value)||1; const len=(cropB-cropA)/bars;
+    if(!(len>0.05)){ say("Select a section first — mark A and B around a known number of bars, then Map.",true); return; }
+    mapGrid={anchor:cropA,barLen:len}; mapOn=true; $("btnMap").classList.add("on"); $("fsMap").classList.add("on"); $("bars").disabled=true;
+    sl.baseBpm=240/len; if(!sl.bpmManual)sl.bpm=sl.baseBpm; sl.downbeat=cropA;
+    updTempoDisp(); waveDraw();
+    const total=Math.floor(((SAMPLES[sl.sidx].dur||0)-mapGrid.anchor)/len);
+    say("Mapped: about "+total+" bars across the file at "+(240/len).toFixed(1)+" BPM. A and B now snap to bar lines.",true);
+  } else { mapOn=false; mapGrid=null; $("btnMap").classList.remove("on"); $("fsMap").classList.remove("on"); $("bars").disabled=false; updTempoDisp(); waveDraw(); say("Map off."); } }
+$("btnMap").onclick=mapToggle; $("fsMap").onclick=mapToggle;
 let undoStack=[];
 function snap(){ const sl=slots[cropK]; if(!sl)return; undoStack.push({A:cropA,B:cropB,slip:sl.slip||0,tr:sl.transpose||0,st:!!sl.stretch,bars:$("bars").value,bpm:sl.bpm,bpmM:!!sl.bpmManual}); if(undoStack.length>4)undoStack.shift(); $("undoN").textContent=undoStack.length; }
 function doUndo(){ if(!undoStack.length)return; const s=undoStack.pop(), sl=slots[cropK]; cropA=s.A; cropB=s.B; sl.slip=s.slip; sl.transpose=s.tr; sl.stretch=s.st; $("bars").value=s.bars; sl.bpm=s.bpm; sl.bpmManual=s.bpmM; syncCrop(); updTranspose(); recalcDisp(); updReadout(); waveDraw(); bump(); $("undoN").textContent=undoStack.length; }
@@ -866,9 +892,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v3.7 ready.");
+say("Sample Loader v3.8 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.7."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.7 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.8."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.8 ready."); },{once:true});
 </script>

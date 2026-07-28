@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.2</title><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.3</title><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.2</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><a id="instBtn" href="https://chi-65.github.io/Ableton-Helper-launchers/app/" target="_blank" style="min-height:36px;font-size:13px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid #8886;border-radius:10px;color:inherit;text-decoration:none">Install icon</a></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.3</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button><a id="instBtn" href="https://chi-65.github.io/Ableton-Helper-launchers/app/" target="_blank" style="min-height:36px;font-size:13px;display:inline-flex;align-items:center;padding:0 12px;border:1px solid #8886;border-radius:10px;color:inherit;text-decoration:none">Install icon</a></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -589,8 +589,12 @@ let DBX=null, dbxName={}, sepWatchOff=null; const sepIngested=new Set();
 const sepState=(()=>{ try{ return JSON.parse(localStorage.getItem(SEPKEY)||"{}"); }catch(e){ return {}; } })();
 sepState.pending=sepState.pending||{}; sepState.ready=sepState.ready||{};
 function sepSave(){ try{ localStorage.setItem(SEPKEY,JSON.stringify(sepState)); }catch(e){} }
-function say(t,focus){ const el=$("read"); if(!el)return; el.textContent=t;
-  if(focus){ el.setAttribute("tabindex","-1"); setTimeout(()=>{ try{el.focus();}catch(e){} },60); } }
+let speakOn=(function(){ try{ return localStorage.getItem("sampleLoader.speak")!=="off"; }catch(e){ return true; } })();
+function speak(t){ if(!speakOn||!window.speechSynthesis)return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.rate=1.05; speechSynthesis.speak(u); }catch(e){} }
+function say(t,focus){ const el=$("read"); if(el){ el.textContent=t;
+    if(focus){ el.setAttribute("tabindex","-1"); setTimeout(()=>{ try{el.focus();}catch(e){} },60); } }
+  speak(t); }
 function payloadOf(r){ let p=r&&r.payload; if(typeof p==="string"){ try{p=JSON.parse(p);}catch(e){} } return p; }
 function asJson(p){ if(p&&typeof p==="object"&&typeof p.text==="string"){ try{return JSON.parse(p.text);}catch(e){return p;} } if(typeof p==="string"){ try{return JSON.parse(p);}catch(e){return p;} } return p; }
 async function dbxInit(){ if(DBX!==null)return DBX;
@@ -776,5 +780,10 @@ function restoreState(){ let st; try{ st=JSON.parse(localStorage.getItem(LSKEY)|
 window.addEventListener("pagehide",saveState); window.addEventListener("beforeunload",saveState);
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
-renderList(); restoreState(); say("Sample Loader v3.2 ready.");
+renderList(); restoreState();
+say("Sample Loader v3.3 ready.");
+$("spkBtn").textContent=speakOn?"🔊":"🔇";
+$("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.3."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.3 ready."); },{once:true});
 </script>

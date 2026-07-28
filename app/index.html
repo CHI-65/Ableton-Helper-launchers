@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.5</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.6</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,10 +49,15 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.5</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.6</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
+ <div class="panel">
+   <div class="row"><b>Dropbox folders</b><span class="sub">stems come in shaded blue</span><span style="flex:1"></span><button id="clrStems">Empty stems folder</button></div>
+   <div class="row"><button id="fld2Btn">＋ Folder 2 (green)…</button><span class="sub" id="fld2Lbl"></span><button id="fld2X" class="sq" hidden>×</button></div>
+   <div class="row"><button id="fld3Btn">＋ Folder 3 (red)…</button><span class="sub" id="fld3Lbl"></span><button id="fld3X" class="sq" hidden>×</button></div>
+ </div>
  <div class="row"><button id="audClk" class="on">Audition click: ON</button><button id="loopAud" class="on">Loop: ON</button><span class="sub">▶ plays with a click at the loop's BPM</span></div>
  <div id="list" class="list" aria-label="Sample list"></div>
 
@@ -151,6 +156,13 @@
   <div class="row"><button class="big on" id="tempoOk">Build →</button><button id="tempoCancel">Cancel</button></div>
 </div></div>
 
+<!-- Dropbox folder browser -->
+<div id="fldDlg" class="modal" hidden><div class="card" role="dialog" aria-modal="true">
+  <h2>Choose a Dropbox folder</h2>
+  <p class="sub" id="fldPath">/</p>
+  <div class="list" id="fldList" style="max-height:40vh"></div>
+  <div class="row"><button class="big on" id="fldUse">Use this folder</button><button id="fldUp">↑ Up</button><button id="fldCancel">Cancel</button></div>
+</div></div>
 <audio id="sil" preload="auto"></audio>
 <script>
 const SAMPLES=[], STEMURL="https://claude.ai/code/artifact/d40bf710-3c24-4ab4-b22f-e22b705cd596";
@@ -162,7 +174,12 @@ $("cnt").textContent=SAMPLES.length+" samples";
 function ensureAudio(){ if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended")AC.resume();
   if(!sil){sil=$("sil");sil.loop=true;sil.setAttribute("playsinline","");sil.src="data:audio/wav;base64,UklGRqQMAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YYAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==";} sil.play().catch(()=>{}); }
 function b64buf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
-async function getBuf(i){ if(SAMPLES[i]._buf)return SAMPLES[i]._buf; if(bufCache[i])return bufCache[i]; const b=await AC.decodeAudioData(b64buf(SAMPLES[i].b64)); bufCache[i]=b; return b; }
+async function getBuf(i){ if(SAMPLES[i].dbxPath&&!SAMPLES[i]._buf)await ensureSample(i);
+  if(SAMPLES[i]._buf)return SAMPLES[i]._buf; if(bufCache[i])return bufCache[i]; const b=await AC.decodeAudioData(b64buf(SAMPLES[i].b64)); bufCache[i]=b; return b; }
+async function ensureSample(i){ const s=SAMPLES[i]; if(!s||!s.dbxPath||s._buf)return;
+  say("Loading "+s.name+"…"); ensureAudio();
+  const ab=await daxDownBin(s.dbxPath); const buf=await AC.decodeAudioData(ab);
+  s._buf=buf; s.dur=+buf.duration.toFixed(3); s.frames=buf.length; s.onsets=calcOnsets(buf); s.peaks=calcPeaks(buf); renderList(); }
 // ---- add a file straight from the device (Photos / Files) ----
 function bpmFromName(n){ for(const p of [/(\d{2,3})\s*bpm/i,/[\s_\-](\d{2,3})[\s_\-]/,/\b(\d{2,3})\b/]){ const m=n.match(p); if(m){ const v=+m[1]; if(v>=60&&v<=200)return v; } } return null; }
 function calcPeaks(buf,N){ N=N||Math.min(4000,Math.max(600,Math.round(buf.duration*40))); const ch=buf.getChannelData(0),n=ch.length,out=[],step=n/N; for(let i=0;i<N;i++){ let mx=0; const a=Math.floor(i*step),b=Math.min(n,Math.floor((i+1)*step)); for(let j=a;j<b;j++){const v=Math.abs(ch[j]); if(v>mx)mx=v;} out.push(Math.min(100,Math.round(mx*100))); } return out; }
@@ -191,7 +208,9 @@ $("folderIn").onchange=e=>{ addFiles(e.target.files,{dialogIfSingle:false}); e.t
 
 // ---- sample list ----
 function renderList(){ const L=$("list"); L.innerHTML="";
+  const TINTS={blue:"rgba(58,122,254,.16)",green:"rgba(52,199,89,.16)",red:"rgba(255,69,58,.16)"};
   SAMPLES.forEach((s,i)=>{ const d=document.createElement("div"); d.className="item";
+    if(s.tint&&TINTS[s.tint])d.style.background=TINTS[s.tint];
     d.innerHTML='<button class="sq aud" title="Audition">▶</button><span class="nm">'+s.name+'</span>'+
       '<span class="chip'+(s.bpm?'':' no')+'">'+(s.bpm?s.bpm+' bpm':'no bpm')+'</span>'+
       '<button class="sq add" title="Add">＋</button>';
@@ -214,7 +233,9 @@ async function auditionOne(i,btn,bpmOverride){ ensureAudio(); if(prevIdx===i&&pr
 
 // ---- Accept / Edit dialog ----
 let dlgIdx=-1, dlgType="loop";
-function openDialog(i){ dlgIdx=i; const s=SAMPLES[i]; dlgType = "loop";
+async function openDialog(i){ if(SAMPLES[i]&&SAMPLES[i].dbxPath&&!SAMPLES[i]._buf){
+    try{ await ensureSample(i); }catch(e){ say("Couldn't load that sample — is Dropbox connected?",true); return; } }
+  dlgIdx=i; const s=SAMPLES[i]; dlgType = "loop";
   $("dlgName").textContent=s.name; $("dlgBpm").value = s.bpm || sessTempoGuess();
   $("dlgBpmSrc").textContent = s.bpm? "from filename":"(no bpm in name)";
   $("dlgType").textContent="Type: "+(dlgType==="loop"?"Loop":"One-shot");
@@ -675,6 +696,42 @@ async function daxDown(path){ const t=await daxToken(); if(!t)throw new Error("n
   const r=await fetch("https://content.dropboxapi.com/2/files/download",{method:"POST",
     headers:{Authorization:"Bearer "+t,"Dropbox-API-Arg":JSON.stringify({path:path})}});
   if(!r.ok)throw new Error("download "+r.status); return r.text(); }
+async function daxDownBin(path){ const t=await daxToken(); if(!t)throw new Error("no dropbox");
+  const r=await fetch("https://content.dropboxapi.com/2/files/download",{method:"POST",
+    headers:{Authorization:"Bearer "+t,"Dropbox-API-Arg":JSON.stringify({path:path})}});
+  if(!r.ok)throw new Error("download "+r.status); return r.arrayBuffer(); }
+// ---- Dropbox source folders: slot 0 = green, slot 1 = red (stems are blue) ----
+const FKEY="sampleLoader.folders";
+let srcFolders=(()=>{ try{ const v=JSON.parse(localStorage.getItem(FKEY)||"[null,null]"); return Array.isArray(v)?v:[null,null]; }catch(e){ return [null,null]; } })();
+function fldSave(){ try{ localStorage.setItem(FKEY,JSON.stringify(srcFolders)); }catch(e){} }
+const AUD_RX2=/\.(wav|mp3|m4a|aif|aiff|flac|ogg)$/i;
+async function loadFolder(slot){ const f=srcFolders[slot]; if(!f||!daxState())return;
+  try{ const r=await daxRpc("files/list_folder",{path:f.path}); let n=0;
+    for(const e of (r.entries||[])){ if(e[".tag"]!=="file"||!AUD_RX2.test(e.name))continue;
+      if(SAMPLES.some(s=>s.dbxPath===e.path_lower))continue; if(n>=60)break;
+      SAMPLES.push({file:e.name,name:e.name.replace(/\.[^.]+$/,""),dur:0,frames:0,bpm:bpmFromName(e.name),
+        onsets:[],peaks:[],uploaded:true,dbxPath:e.path_lower,tint:f.color}); n++; }
+    renderList(); $("cnt").textContent=SAMPLES.length+" samples";
+    if(n)say(n+" samples added from "+(f.path.split("/").pop()||"Dropbox")+".");
+  }catch(e){ say("Couldn't load folder "+f.path+"."); } }
+function fldUI(){ const map=[["fld2Btn","fld2Lbl","fld2X",0],["fld3Btn","fld3Lbl","fld3X",1]];
+  for(const [b,l,xb,k] of map){ const f=srcFolders[k]; $(l).textContent=f?f.path:""; $(xb).hidden=!f; } }
+let fldCur="", fldSlot=0;
+function fldOpen(slot){ if(!daxState()){ alert("Connect Dropbox first — open Split into stems on any sample and tap the blue Connect Dropbox button."); return; }
+  fldSlot=slot; fldCur=(srcFolders[slot]&&srcFolders[slot].path)||""; $("fldDlg").hidden=false; fldRender(); }
+async function fldRender(){ $("fldPath").textContent=fldCur||"top of your Dropbox";
+  const L=$("fldList"); L.innerHTML="<p class=\"sub\">loading…</p>";
+  try{ const r=await daxRpc("files/list_folder",{path:fldCur});
+    L.innerHTML="";
+    const na=(r.entries||[]).filter(e=>e[".tag"]==="file"&&AUD_RX2.test(e.name)).length;
+    const pn=document.createElement("p"); pn.className="sub"; pn.textContent=na+" audio files in this folder"; L.appendChild(pn);
+    for(const d of (r.entries||[]).filter(e=>e[".tag"]==="folder")){
+      const b=document.createElement("button"); b.style.textAlign="left"; b.textContent="📁 "+d.name;
+      b.onclick=()=>{ fldCur=d.path_lower; fldRender(); }; L.appendChild(b); }
+  }catch(e){ L.innerHTML="<p class=\"sub\">couldn't list that folder</p>"; } }
+function fldRemove(slot){ const f=srcFolders[slot]; if(!f)return;
+  for(let i=SAMPLES.length-1;i>=0;i--) if(SAMPLES[i].dbxPath&&SAMPLES[i].tint===f.color)SAMPLES.splice(i,1);
+  srcFolders[slot]=null; fldSave(); fldUI(); renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say("Folder removed."); }
 let daxPoll=null;
 function renderSepStatus(){ let el=$("sepStatus"); const ids=Object.keys(sepState.pending);
   if(!el){ el=document.createElement("p"); el.id="sepStatus"; el.className="sub"; el.setAttribute("aria-live","polite"); $("list").parentNode.insertBefore(el,$("list")); }
@@ -731,7 +788,7 @@ async function ingestSep(id){ if(sepIngested.has(id))return; sepIngested.add(id)
     for(const st of (man&&man.stems)||[]){ const pj=await grab(st.json);
       let buf; try{ buf=await AC.decodeAudioData(b64buf(pj.b64)); }catch(e){ continue; }
       SAMPLES.push({file:st.file,name:pen.name+" · "+st.role,dur:+buf.duration.toFixed(3),frames:buf.length,
-        bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name}); added++; }
+        bpm:pen.bpm,onsets:calcOnsets(buf),peaks:calcPeaks(buf),_buf:buf,uploaded:true,stemOf:pen.name,tint:"blue"}); added++; }
     if(added){ renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say(added+" stems from "+pen.name+" are now in the sample list.",true); }
     else{ sepIngested.delete(id); say("Stems for "+pen.name+" arrived but couldn't be read — tell Claude."); }
     if(!Object.keys(sepState.pending).length&&sepWatchOff){ sepWatchOff(); sepWatchOff=null; }
@@ -758,11 +815,26 @@ function sepGo(model){ $("sepDlg").hidden=true; const s=SAMPLES[dlgIdx];
 $("sep4").onclick=()=>sepGo("htdemucs_ft");
 $("sep6").onclick=()=>sepGo("htdemucs_6s");
 $("sepCancel").onclick=()=>{ $("sepDlg").hidden=true; };
-renderSepStatus();
+renderSepStatus(); fldUI();
+$("fld2Btn").onclick=()=>fldOpen(0); $("fld3Btn").onclick=()=>fldOpen(1);
+$("fld2X").onclick=()=>fldRemove(0); $("fld3X").onclick=()=>fldRemove(1);
+$("fldUp").onclick=()=>{ if(!fldCur)return; fldCur=fldCur.replace(/\/[^/]+$/,""); fldRender(); };
+$("fldCancel").onclick=()=>{ $("fldDlg").hidden=true; };
+$("fldUse").onclick=()=>{ if(!fldCur){ say("Go inside a folder first — the very top can't be used."); return; }
+  $("fldDlg").hidden=true; srcFolders[fldSlot]={path:fldCur,color:fldSlot===0?"green":"red"}; fldSave(); fldUI(); loadFolder(fldSlot); };
+$("clrStems").onclick=async()=>{ if(!daxState()){ alert("Connect Dropbox first (Split into stems → Connect Dropbox)."); return; }
+  if(!confirm("Empty the finished-separations folder in Dropbox? Stems already in your list stay until the app is closed."))return;
+  try{ const r=await daxRpc("files/list_folder",{path:SEP_DIR}); let n=0;
+    for(const e of (r.entries||[])){ if(e[".tag"]!=="file"||!/^(req-|res-)/.test(e.name))continue;
+      await daxRpc("files/delete_v2",{path:e.path_lower}); n++; }
+    sepState.ready={}; sepState.pending={}; sepSave(); renderSepStatus();
+    say("Cleared "+n+" files from the stems folder.",true);
+  }catch(e){ say("Couldn't clear the folder.",true); } };
 daxBoot().then(()=>{ (async()=>{ let any=false;
   if(window.claude&&window.claude.mcp&&await dbxInit())any=true;
   else if(daxState()){ try{ await daxToken(); any=true; }catch(e){} }
-  if(!any)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch(); })(); });
+  if(!any)return; for(const id of Object.keys(sepState.ready)) ingestSep(id); sepWatch();
+  loadFolder(0); loadFolder(1); })(); });
 
 // ---- persistent memory (localStorage): survive an accidental tap-out / reload ----
 const LSKEY="sampleLoader.v1"; let saveTimer=null, restoring=false;
@@ -788,9 +860,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v3.5 ready.");
+say("Sample Loader v3.6 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.5."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.5 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.6."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.6 ready."); },{once:true});
 </script>

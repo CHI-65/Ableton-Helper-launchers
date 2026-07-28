@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v4.1</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v4.2</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.1</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v4.2</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -75,6 +75,8 @@
 
  <div class="row">
    <input type="text" id="sessName" value="New Sample Session" aria-label="Session name" style="flex:1;min-width:160px">
+   <button id="saveSess" title="save this whole session — edited samples as audio files plus all settings — to Dropbox">💾 Save</button>
+   <button id="openSess" title="open a saved session">📂 Open</button>
    <button id="create" disabled>Create session</button></div>
  <input class="out" id="capout" readonly aria-label="Build manifest" value="load samples, send to session, then Create">
  <p class="sub" id="read" aria-live="polite"></p>
@@ -156,6 +158,12 @@
   <div class="row"><button class="big on" id="tempoOk">Build →</button><button id="tempoCancel">Cancel</button></div>
 </div></div>
 
+<!-- Saved sessions -->
+<div id="sessDlg" class="modal" hidden><div class="card" role="dialog" aria-modal="true">
+  <h2>Open a saved session</h2>
+  <div class="list" id="sessList" style="max-height:44vh"></div>
+  <div class="row"><button id="sessCancel">Cancel</button></div>
+</div></div>
 <!-- Dropbox folder browser -->
 <div id="fldDlg" class="modal" hidden><div class="card" role="dialog" aria-modal="true">
   <h2>Choose a Dropbox folder</h2>
@@ -803,6 +811,52 @@ async function fldRender(){ $("fldPath").textContent=fldCur||"top of your Dropbo
 function fldRemove(slot){ const f=srcFolders[slot]; if(!f)return;
   for(let i=SAMPLES.length-1;i>=0;i--) if(SAMPLES[i].dbxPath&&SAMPLES[i].tint===f.color)SAMPLES.splice(i,1);
   srcFolders[slot]=null; fldSave(); fldUI(); renderList(); $("cnt").textContent=SAMPLES.length+" samples"; say("Folder removed."); }
+// ---- named sessions: total recall to/from /SampleLoader/sessions/<name>/ ----
+async function saveSession(){ if(!daxState()){ alert("Connect Dropbox first (Split into stems → Connect Dropbox)."); return; }
+  const name=((($("sessName")||{}).value)||"Session").replace(/[\\/:]+/g,"-").trim()||"Session";
+  const base="/SampleLoader/sessions/"+name;
+  const items=allItems(); if(!items.length){ say("Nothing to save yet — load some samples first.",true); return; }
+  say("Saving session "+name+"…",true);
+  try{
+    const meta={v:1,sess:$("sessName").value,master:($("masterBpm")||{}).value||"",clkVol:clkVol,
+      folders:srcFolders,pinnedMap:pinnedMap,items:[]};
+    for(let k=0;k<items.length;k++){ const sl=items[k];
+      const ser=serializeSlot(sl); ser.target=(k<slots.length)?"slots":"committed";
+      try{ const buf=await bakeRender(sl);
+        const fn=String(k+1).padStart(2,"0")+"_"+((sl.name||"sample").replace(/[^A-Za-z0-9]+/g,"_"))+".wav";
+        say("Saving audio "+(k+1)+" of "+items.length+"…");
+        await daxUp(base+"/"+fn, wavBytes(buf)); ser.bakedPath=(base+"/"+fn).toLowerCase(); }catch(e){}
+      meta.items.push(ser); }
+    await daxUp(base+"/session.json", JSON.stringify(meta));
+    say("Session "+name+" saved to Dropbox — "+items.length+" edited samples included.",true);
+  }catch(e){ say("Save failed — is Dropbox connected?",true); } }
+async function openSessDlg(){ if(!daxState()){ alert("Connect Dropbox first (Split into stems → Connect Dropbox)."); return; }
+  $("sessDlg").hidden=false; const L=$("sessList"); L.innerHTML="<p class=\"sub\">loading…</p>";
+  try{ const r=await daxRpc("files/list_folder",{path:"/SampleLoader/sessions"});
+    L.innerHTML=""; const dirs=(r.entries||[]).filter(e=>e[".tag"]==="folder");
+    if(!dirs.length)L.innerHTML="<p class=\"sub\">no saved sessions yet</p>";
+    for(const d of dirs){ const b=document.createElement("button"); b.style.textAlign="left"; b.textContent="💾 "+d.name;
+      b.onclick=()=>{ $("sessDlg").hidden=true; loadSession(d.path_lower,d.name); }; L.appendChild(b); }
+  }catch(e){ L.innerHTML="<p class=\"sub\">no saved sessions yet</p>"; } }
+async function loadSession(path,name){ say("Loading session "+name+"…",true);
+  try{ const meta=JSON.parse(await daxDown(path+"/session.json"));
+    if(allItems().length&&!confirm("Replace your current queue with session "+name+"?"))return;
+    stopAll(); slots.length=0; committed.length=0; pendingSlots.length=0;
+    if(meta.sess&&$("sessName"))$("sessName").value=meta.sess;
+    if(meta.master!=null&&$("masterBpm"))$("masterBpm").value=meta.master;
+    if(meta.clkVol!=null){ clkVol=meta.clkVol; if($("clkVolR"))$("clkVolR").value=Math.round(clkVol*100); }
+    if(meta.folders){ srcFolders=meta.folders; fldSave(); fldUI(); loadFolder(0); loadFolder(1); }
+    if(meta.pinnedMap!==undefined){ pinnedMap=meta.pinnedMap||null; pinSave(); }
+    for(const o of (meta.items||[])){ let i=resolveSidx(o);
+      if(i<0&&o.dbxPath){ SAMPLES.push({file:o.file,name:o.sname||o.file,dur:0,frames:0,bpm:null,onsets:[],peaks:[],
+        uploaded:true,dbxPath:o.dbxPath,tint:o.tint}); i=SAMPLES.length-1; }
+      if(i<0&&o.bakedPath){ const fn=o.bakedPath.split("/").pop();
+        SAMPLES.push({file:fn,name:o.name||fn,dur:0,frames:0,bpm:o.bpm||null,onsets:[],peaks:[],uploaded:true,dbxPath:o.bakedPath});
+        i=SAMPLES.length-1; o.cin=0; o.cout=1e9; o.slip=0; o.transpose=0; o.stretch=false; o.reverse=false; }
+      if(i>=0){ const d=deserializeSlot(o); d.sidx=i; (o.target==="slots"?slots:committed).push(d); } }
+    renderList(); renderSlots(); renderCommitted(); $("cnt").textContent=SAMPLES.length+" samples";
+    say("Session "+name+" loaded — "+(meta.items||[]).length+" samples in place.",true);
+  }catch(e){ say("Couldn't load that session.",true); } }
 let daxPoll=null;
 function renderSepStatus(){ let el=$("sepStatus"); const ids=Object.keys(sepState.pending);
   if(!el){ el=document.createElement("p"); el.id="sepStatus"; el.className="sub"; el.setAttribute("aria-live","polite"); $("list").parentNode.insertBefore(el,$("list")); }
@@ -893,6 +947,8 @@ $("fldUp").onclick=()=>{ if(!fldCur)return; fldCur=fldCur.replace(/\/[^/]+$/,"")
 $("fldCancel").onclick=()=>{ $("fldDlg").hidden=true; };
 $("fldUse").onclick=()=>{ if(!fldCur){ say("Go inside a folder first — the very top can't be used."); return; }
   $("fldDlg").hidden=true; srcFolders[fldSlot]={path:fldCur,color:fldSlot===0?"green":"red"}; fldSave(); fldUI(); loadFolder(fldSlot); };
+$("saveSess").onclick=saveSession; $("openSess").onclick=openSessDlg;
+$("sessCancel").onclick=()=>{ $("sessDlg").hidden=true; };
 $("clrStems").onclick=async()=>{ if(!daxState()){ alert("Connect Dropbox first (Split into stems → Connect Dropbox)."); return; }
   if(!confirm("Empty the finished-separations folder in Dropbox? Stems already in your list stay until the app is closed."))return;
   try{ const r=await daxRpc("files/list_folder",{path:SEP_DIR}); let n=0;
@@ -948,9 +1004,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v4.1 ready.");
+say("Sample Loader v4.2 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.1."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.1 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v4.2."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v4.2 ready."); },{once:true});
 </script>

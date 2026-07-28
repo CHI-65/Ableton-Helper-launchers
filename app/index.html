@@ -1,4 +1,4 @@
-<meta charset="utf-8"><title>Sample Loader v3.6</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
+<meta charset="utf-8"><title>Sample Loader v3.7</title><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Sample Loader"><link rel="apple-touch-icon" sizes="180x180" href="../assets/sample_loader_icon.png"><link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/CHI-65/CTW-projects/main/assets/sample_loader_icon.png"><meta name="apple-mobile-web-app-title" content="Sample Loader">
 <style>
  :root{color-scheme:light dark} html,body{margin:0;touch-action:manipulation}
  main{max-width:760px;margin:0 auto;padding:16px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif}
@@ -49,7 +49,7 @@
  .crow .steps button{min-height:40px;padding:0 11px}
 </style>
 <main>
- <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.6</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
+ <div class="row"><h1>Sample Loader <span style="font-size:13px;color:#888;font-weight:600">v3.7</span></h1><span style="flex:1"></span><span id="sepChip" class="chip" role="status" hidden style="background:#af52de">⚡ separating…</span><button id="spkBtn" style="min-height:36px;font-size:15px" title="Toggle spoken announcements">🔊</button></div>
  <p class="sub">Gathered from <b>your device</b> · <span id="cnt"></span>. Tap ▶ to hear a sample, + to load it.</p>
  <div class="row"><button id="addFolder">＋ Choose a folder</button><input id="folderIn" type="file" webkitdirectory hidden><button id="addFile">＋ Add from Photos / Files</button><input id="fileIn" type="file" accept="video/*,audio/*" multiple hidden><span class="sub">folder: on the Mac · Photos/Files: on iPad (multi-select ok)</span></div>
 
@@ -115,7 +115,7 @@
   <div class="crow"><span class="lbl">Tempo</span><span class="steps" style="grid-column:2/4;justify-content:flex-start;align-items:center"><button id="tempoDown" title="tempo down">◀</button><span class="val" id="cropBpm" title="long-press to type a tempo" style="min-width:118px;text-align:center">tempo —</span><button id="tempoUp" title="tempo up">▶</button><button id="tempoReset" title="reset to detected tempo">↺</button></span></div>
 
   <div class="row" style="margin-top:6px"><button class="big cplay">▶ Play</button><button id="btnZone" title="zone mode: touch a shaded zone to move that marker, elsewhere above center = slip, below center = pan/zoom">▦ Zone</button>
-    <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
+    <button id="btnTrans" title="show transients + snap the A/B drag handles to them">⌁ Snap</button><button id="fitBtn" title="zoom out to the whole file">⤢ Fit</button><button id="vzOut" title="waveform vertical zoom out">V−</button><button id="vzIn" title="waveform vertical zoom in">V+</button><button id="waveBig" title="expand the waveform full-screen">⛶ Big</button></div>
   <div class="sub" id="waveHint" style="margin:0 0 3px">A/B/Slip on the left · none lit → pinch/zoom/move · or use Zone</div>
   <div id="waveStage">
     <div id="waveLeft"><button id="btnA" title="move downbeat A">A</button><button id="btnB" title="move loop-end B">B</button><button id="btnSlip" title="slip the sample under A–B" hidden>Slip</button></div>
@@ -134,7 +134,7 @@
     <button class="big cplay">▶ Play</button>
     <button id="fsZone" title="zone mode">▦ Zone</button>
     <button id="fsTrans" title="transient snap">⌁ Snap</button>
-    <button id="fsUndo" class="big">↶ Undo</button>
+    <button id="fsFit">⤢ Fit</button><button id="fsUndo" class="big">↶ Undo</button>
     <span class="val" id="fsInfo" style="flex:1;text-align:center;font-size:14px">—</span>
     <button id="waveClose" class="big">✕ Close</button>
   </div>
@@ -461,7 +461,10 @@ function wxy(e){ const r=$("wave").getBoundingClientRect(); return {x:e.clientX-
     if(act==="A"||act==="B"||act==="slip")snap();
     if(act==="A") wdrag={t:"A",x0:p.x,v0:cropA,lastX:p.x,moved:false}; else if(act==="B") wdrag={t:"B",x0:p.x,v0:cropB,lastX:p.x,moved:false}; else if(act==="slip") wdrag={t:"slip",x0:p.x,v0:sl.slip||0}; else if(act==="pan") wdrag={t:"pan",x0:p.x,v0:wVS}; else wdrag=null; });
   c.addEventListener("pointermove",e=>{ if(!wptrs.has(e.pointerId))return; const p=wxy(e); wptrs.set(e.pointerId,p);
-    if(wpinch){ const a=[...wptrs.values()]; if(a.length>=2){ const d=Math.abs(a[0].x-a[1].x)||1; wPpx=Math.max(20,Math.min(8000,wpinch.ppx0*d/wpinch.d0)); wVS=wpinch.cxT-wpinch.cx/wPpx; waveDraw(); } return; }
+    if(wpinch){ const a=[...wptrs.values()]; if(a.length>=2){ const d=Math.abs(a[0].x-a[1].x)||1;
+      const sl=slots[cropK], fdur=(sl&&SAMPLES[sl.sidx]&&SAMPLES[sl.sidx].dur)||1;
+      const minP=Math.min(20,(wcv.width*0.5)/Math.max(0.2,fdur));
+      wPpx=Math.max(minP,Math.min(8000,wpinch.ppx0*d/wpinch.d0)); wVS=wpinch.cxT-wpinch.cx/wPpx; waveDraw(); } return; }
     if(!wdrag)return; const dx=(p.x-wdrag.x0)/wPpx, sl=slots[cropK], dur=SAMPLES[sl.sidx].dur;
     wdrag.lastX=p.x; if(Math.abs(p.x-wdrag.x0)>6)wdrag.moved=true;
     if(wdrag.t==="A"){ cropA=Math.max(0,Math.min(cropB-0.02,snapT(wdrag.v0+dx))); recalcDisp(); }
@@ -482,6 +485,9 @@ $("btnB").onclick=()=>{ bOn=!bOn; abView(); updABUI(); };
 $("btnSlip").onclick=()=>{ aOn=false; bOn=false; updABUI(); };   // tap Slip → back to A/B, nothing lit = zoom/move
 $("btnZone").onclick=()=>{ zoneMode=!zoneMode; if(!zoneMode){ aOn=false; bOn=false; } $("btnZone").classList.toggle("on",zoneMode); updABUI(); };
 window.addEventListener("resize",()=>{ if(waveExpanded)waveResize(); else if(!$("crop").hidden)waveFit(); });
+function waveWhole(){ const sl=slots[cropK]; if(!sl||!wcv)return; const fdur=SAMPLES[sl.sidx].dur||1;
+  wPpx=(wcv.width*0.95)/fdur; wVS=-(wcv.width*0.025)/wPpx; waveDraw(); }
+$("fitBtn").onclick=waveWhole; $("fsFit").onclick=waveWhole;
 $("waveBig").onclick=()=>waveExpand(true);
 $("waveClose").onclick=()=>waveExpand(false);
 $("fsZone").onclick=()=>$("btnZone").click();
@@ -860,9 +866,9 @@ window.addEventListener("pagehide",saveState); window.addEventListener("beforeun
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden")saveState(); });
 
 renderList(); restoreState();
-say("Sample Loader v3.6 ready.");
+say("Sample Loader v3.7 ready.");
 $("spkBtn").textContent=speakOn?"🔊":"🔇";
 $("spkBtn").onclick=()=>{ speakOn=!speakOn; try{ localStorage.setItem("sampleLoader.speak",speakOn?"on":"off"); }catch(e){}
-  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.6."); };
-document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.6 ready."); },{once:true});
+  $("spkBtn").textContent=speakOn?"🔊":"🔇"; if(speakOn)speak("Speech on. Sample Loader v3.7."); };
+document.addEventListener("pointerdown",function once(){ document.removeEventListener("pointerdown",once); speak("Sample Loader v3.7 ready."); },{once:true});
 </script>

@@ -5,8 +5,8 @@ description: Cal's account-wide context — machines (CHI music = main/session M
 
 # Cal — account context
 
-- **Accessibility:** Cal is visually impaired. Audio-first; short, plain, screen-reader-friendly replies;
-  verify by ear; do everything yourself — only fall back to Cal for credentials/payments/OS approvals.
+- **Accessibility:** Cal is visually impaired. He types and reads (audio tools don't work for him currently):
+  short, plain, well-structured text; large clear controls; do everything yourself — only fall back to Cal for credentials/payments/OS approvals.
 - **Machines:** Main Mac = **CHI music** (username `CHItest`, ComputerName "MacBook Pro (2)") — Ableton,
   the pipeline, all tools live here. Other Macs incl. "CHI Piano" exist; NONE are test machines.
 - **Chrome extension deviceIds — select by ID, NEVER quiz Cal:**

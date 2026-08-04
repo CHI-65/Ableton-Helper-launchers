@@ -9,7 +9,7 @@ Sessions run on exactly ONE machine; the Chrome extension connects account-wide,
 drive may be on a DIFFERENT computer whose screen the user can see. Never assume; never quiz the user.
 
 **Known deviceIds (Cal's account):** CHI music (main Mac) = `b6e498cc-8f1c-4eaf-b9bb-3d92fe0c5290`;
-other Macs = `7fa0883a-b676-4564-a92f-f085e976e05c`, `a3002c9e-e3df-4012-851a-8e98d743adad`.
+CHI Piano = `a3002c9e-e3df-4012-851a-8e98d743adad`; CHI Bus = `7fa0883a-b676-4564-a92f-f085e976e05c`.
 Select by deviceId. Display names ("Browser 1/2/3") reshuffle between connections; the `isLocal`
 flag has been observed wrong — trust neither.
 

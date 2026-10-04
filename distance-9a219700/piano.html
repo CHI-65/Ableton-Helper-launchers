@@ -39,6 +39,18 @@
  .copyb{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:9px;padding:11px 16px;
    font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;width:100%}
  .copyb.done{background:var(--accent);color:#fff}
+ .eqwrap{border-top:1px solid var(--edge);padding:14px 16px}
+ .eqscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+ .eqbands{display:flex;gap:3px;min-width:max-content;align-items:flex-end}
+ .band{display:flex;flex-direction:column;align-items:center;width:38px;flex:none}
+ .band .v{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted);height:14px}
+ .band .slot{height:120px;width:38px;display:flex;align-items:center;justify-content:center;position:relative}
+ .band input[type=range]{width:112px;height:26px;margin:0;transform:rotate(-90deg);accent-color:var(--piano);touch-action:none}
+ .band .f{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint);height:14px;margin-top:3px}
+ .band.act .v{color:var(--piano);font-weight:700}
+ .band.solo{background:color-mix(in srgb,#c8791f 24%,transparent);border-radius:7px;box-shadow:inset 0 0 0 2px #c8791f}
+ .band.solo .v,.band.solo .f{color:#c8791f;font-weight:800}
+ .eqtop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
  .hint{padding:14px 20px 18px;font-size:12px;color:var(--faint);line-height:1.6;margin:0}
  .loading{padding:0 20px 16px;font-size:12.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -75,6 +87,12 @@
   <button class="btn" id="setB">Set B<span class="key">B</span></button>
   <button class="btn" id="loopBtn">Loop<span class="key">O</span></button>
   <button class="btn" id="clrAB">Clear</button><span class="win" id="winTxt">whole track</span></div>
+ <div class="eqwrap">
+   <div class="eqtop"><b style="font-size:13px">Piano-stem EQ</b>
+     <button class="btn on" id="eqOn">ON</button><button class="btn" id="eqFlat">Flat</button>
+     <span class="win" id="eqInfo" style="font-size:11.5px;color:var(--faint)">long-press a band to solo it</span></div>
+   <div class="eqscroll"><div class="eqbands" id="eqBands"></div></div>
+ </div>
  <div class="row"><button class="copyb" id="copyB">Copy this setting for chat</button></div>
  <p class="hint"><b>Keys:</b> <span class="key">space</span> play ·
   <span class="key">↑</span><span class="key">↓</span> piano ±0.1 dB ·
@@ -100,7 +118,26 @@ function fmt(s){s=Math.max(0,s);return Math.floor(s/60)+":"+String(Math.floor(s%
 const BUF={},G={};
 let srcs=null,playing=false,offset=0,t0=0,dur=0,drag=false,gainDb=-7.5,mA=null,mB=null,loopOn=false;
 const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
-["other","piano"].forEach(k=>{const g=ctx.createGain();g.gain.value=1;g.connect(ctx.destination);G[k]=g;});
+const FREQS=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,
+             2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
+const EQG=new Array(30).fill(0); const SOLO=new Set(); let eqOn=true;
+const EQ=FREQS.map(f=>{const b=ctx.createBiquadFilter();b.type="peaking";b.frequency.value=f;b.Q.value=4.32;b.gain.value=0;return b;});
+const SOLOB=FREQS.map(f=>{const a=ctx.createBiquadFilter(),b=ctx.createBiquadFilter();
+  a.type=b.type="bandpass";a.frequency.value=b.frequency.value=f;a.Q.value=b.Q.value=4.32;return[a,b];});
+const SOLOG=FREQS.map(()=>{const g=ctx.createGain();g.gain.value=1;return g;});
+const soloBus=ctx.createGain(); soloBus.gain.value=2.0;
+["other","piano"].forEach(k=>{const g=ctx.createGain();g.gain.value=1;G[k]=g;});
+const pianoIn=ctx.createGain();            // EQ sits on the PIANO path only
+function wireEQ(){
+  try{pianoIn.disconnect();}catch(e){} EQ.forEach(b=>{try{b.disconnect();}catch(e){}});
+  SOLOB.forEach(pr=>{try{pr[0].disconnect();}catch(e){}try{pr[1].disconnect();}catch(e){}});
+  SOLOG.forEach(g=>{try{g.disconnect();}catch(e){}}); try{soloBus.disconnect();}catch(e){}
+  if(SOLO.size){ SOLO.forEach(i=>{const pr=SOLOB[i];pianoIn.connect(pr[0]);pr[0].connect(pr[1]);
+      pr[1].connect(SOLOG[i]);SOLOG[i].connect(soloBus);SOLOG[i].gain.value=Math.pow(10,EQG[i]/20);});
+    soloBus.connect(G.piano); }
+  else if(eqOn){ let n=pianoIn; EQ.forEach(b=>{n.connect(b);n=b;}); n.connect(G.piano); }
+  else pianoIn.connect(G.piano);}
+wireEQ(); G.piano.connect(ctx.destination); G.other.connect(ctx.destination);
 let stemMode="both";
 function applyPiano(){const n=ctx.currentTime;
   const pv = stemMode==="other" ? 0 : Math.pow(10,gainDb/20);
@@ -127,7 +164,7 @@ function pos(){if(!playing)return offset;const el=Math.max(0,ctx.currentTime-t0)
   if(loopOn){const a=winA(),z=winB(),L=z-a;if(L<=0)return offset;return a+(((offset-a)%L+L)%L+el)%L;}
   return Math.min(dur,offset+el);}
 function startAll(at){t0=ctx.currentTime+.06;
-  srcs=["other","piano"].map(k=>{const s=ctx.createBufferSource();s.buffer=BUF[k];s.connect(G[k]);
+  srcs=["other","piano"].map(k=>{const s=ctx.createBufferSource();s.buffer=BUF[k];s.connect(k==="piano"?pianoIn:G[k]);
     if(loopOn){const a=winA(),z=Math.min(winB(),BUF[k].duration);s.loop=true;s.loopStart=a;s.loopEnd=z;s.start(t0,Math.min(Math.max(at,a),z));}
     else s.start(t0,Math.min(at,BUF[k].duration));return s;});
   offset=at;playing=true;$("play").textContent="Pause";applyPiano();}
@@ -144,6 +181,36 @@ $("setA").onclick=()=>{mA=pos();if(mB!=null&&mB<=mA)mB=null;reArm();};
 $("setB").onclick=()=>{const p=pos();if(p>winA()){mB=p;reArm();}};
 $("clrAB").onclick=()=>{mA=mB=null;reArm();};
 $("loopBtn").onclick=()=>{loopOn=!loopOn;$("loopBtn").classList.toggle("on",loopOn);reArm();};
+const BANDEL=[];
+$("eqBands").innerHTML=FREQS.map((f,i)=>{const l=f>=1000?(f/1000)+"k":String(f);
+  return `<div class="band" data-i="${i}"><span class="v" id="ev${i}">0.0</span>
+   <span class="slot"><input type="range" min="-120" max="120" step="1" value="0" data-i="${i}" aria-label="${l} hertz"></span>
+   <span class="f">${l}</span></div>`;}).join("");
+FREQS.forEach((f,i)=>BANDEL[i]=$("eqBands").querySelector('input[data-i="'+i+'"]'));
+function eqRead(i){const v=EQG[i],e=$("ev"+i);e.textContent=(v>0?"+":"")+v.toFixed(1);
+  e.parentElement.classList.toggle("act",Math.abs(v)>=0.05);}
+function setBand(i,v){EQG[i]=v;const p=EQ[i].gain;try{p.cancelScheduledValues(ctx.currentTime);}catch(e){}p.value=v;
+  if(SOLO.has(i))SOLOG[i].gain.value=Math.pow(10,v/20); eqRead(i);}
+$("eqBands").addEventListener("input",e=>{const i=+e.target.dataset.i;if(isNaN(i))return;setBand(i,(+e.target.value)/10);});
+function fL(i){const f=FREQS[i];return f>=1000?(f/1000)+"k":String(f);}
+function soloUI(){FREQS.forEach((f,i)=>{const el=$("eqBands").querySelector('.band[data-i="'+i+'"]');
+    if(el)el.classList.toggle("solo",SOLO.has(i));});
+  $("eqInfo").textContent=SOLO.size?("soloing "+[...SOLO].sort((a,b)=>a-b).map(fL).join(", ")+" Hz — tap again to clear")
+                                   :"long-press a band to solo it";}
+function toggleSolo(i){SOLO.has(i)?SOLO.delete(i):SOLO.add(i);wireEQ();soloUI();
+  $("say").textContent=(SOLO.has(i)?"Solo ":"Unsolo ")+fL(i)+" hertz";}
+(function(){let t=null,idx=-1,mv=false,x0=0,y0=0;const stop=()=>{clearTimeout(t);t=null;idx=-1;};
+ $("eqBands").addEventListener("pointerdown",e=>{const el=e.target.closest('input[type=range]');if(!el)return;
+   idx=+el.dataset.i;mv=false;x0=e.clientX;y0=e.clientY;clearTimeout(t);
+   t=setTimeout(()=>{if(!mv&&idx>=0)toggleSolo(idx);stop();},550);},{passive:true});
+ $("eqBands").addEventListener("pointermove",e=>{if(idx<0)return;
+   if(Math.abs(e.clientX-x0)>6||Math.abs(e.clientY-y0)>6){mv=true;clearTimeout(t);}},{passive:true});
+ ["pointerup","pointercancel","pointerleave"].forEach(ev=>$("eqBands").addEventListener(ev,stop,{passive:true}));
+ $("eqBands").addEventListener("keydown",e=>{const el=e.target.closest('input[type=range]');if(!el)return;
+   if(e.key==="s"||e.key==="S"){e.preventDefault();toggleSolo(+el.dataset.i);}});})();
+$("eqOn").onclick=()=>{eqOn=!eqOn;$("eqOn").classList.toggle("on",eqOn);$("eqOn").textContent=eqOn?"ON":"OFF";wireEQ();};
+$("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{setBand(i,0);if(BANDEL[i])BANDEL[i].value=0;});};
+FREQS.forEach((f,i)=>eqRead(i)); soloUI();
 $("copyB").onclick=async()=>{const t="Piano at "+(gainDb>0?"+":"")+gainDb.toFixed(1)+" dB relative to the original master"
   +((mA!=null||mB!=null)?" (judged over "+fmt(winA())+"–"+fmt(winB())+")":"");
   let ok=false; try{await navigator.clipboard.writeText(t);ok=true;}catch(e){}

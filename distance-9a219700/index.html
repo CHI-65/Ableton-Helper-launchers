@@ -95,10 +95,19 @@
   <span class="time" id="cur">0:00</span>
   <input type="range" id="seek" min="0" max="100000" value="0" step="1" aria-label="Seek">
   <span class="time" id="dur">0:00</span></div>
+ <div class="marks"><div class="mt">Loop a section</div>
+  <div class="mg" style="align-items:center">
+   <button class="mb" id="setA"><b>Set A</b><span>start<span class="key">A</span></span></button>
+   <button class="mb" id="setB"><b>Set B</b><span>end<span class="key">B</span></span></button>
+   <button class="tg" id="loopBtn" aria-pressed="false" style="height:34px">Loop<span class="key">O</span></button>
+   <button class="mb" id="clrAB"><b>Clear</b><span>whole track</span></button>
+   <span id="winTxt" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)">whole track</span>
+  </div></div>
  <div class="marks"><div class="mt">Jump to</div><div class="mg" id="marks"></div></div>
  <p class="hint"><b>Keys:</b> <span class="key">space</span> play/pause &nbsp;
   <span class="key">1</span>–<span class="key">6</span> switch version &nbsp;
   <span class="key">L</span> level match &nbsp; <span class="key">W</span> AAC/WAV &nbsp;
+  <span class="key">A</span>/<span class="key">B</span> loop points &nbsp; <span class="key">O</span> loop &nbsp;
   <span class="key">←</span><span class="key">→</span> ±5 s<br>
   WAV needs <b>serve.command</b> running in this folder.</p>
  <div class="sr" aria-live="polite" id="say"></div>
@@ -106,7 +115,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "OLD", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "NEW", "sub": "edit. 2 \u2014 piano down", "lufs": -16.6, "tp": "+0.07", "crest": "18.68", "loose": false, "b64": null}, {"key": "matched", "name": "MATCHED", "sub": "edit. 2 + DC fix + drive", "lufs": -12.1, "tp": "-1.00", "crest": "13.32", "loose": false, "b64": null}, {"key": "refdynamic", "name": "REF-MATCH", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "refloud", "name": "REF-MATCH LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.17", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791104666611;
+const EXPIRES=1791104801241;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -127,6 +136,8 @@ function fmt(s){s=Math.max(0,s);return Math.floor(s/60)+":"+String(Math.floor(s%
 const G={},BUF={aac:{},wav:{}};
 let active="old",levelMatch=true,srcMode="aac",wavReady=false,wavBusy=false,wavUp=false;
 let sources=null,playing=false,offset=0,t0=0,dur=0,dragging=false;
+let mA=null,mB=null,loopOn=false;
+const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
 const B=k=>BUF[srcMode][k];
 TRACKS.forEach(t=>{const g=ctx.createGain();g.gain.value=0;g.connect(ctx.destination);G[t.key]=g;});
 function gainFor(t){return levelMatch?Math.pow(10,(TARGET-t.lufs)/20):1;}
@@ -168,11 +179,18 @@ async function setSrc(mode){ if(mode===srcMode||wavBusy)return;
   if(was)startAll(offset); }
 $("sAac").onclick=()=>setSrc("aac"); $("sWav").onclick=()=>setSrc("wav");
 
-function pos(){return playing?Math.min(dur,offset+Math.max(0,ctx.currentTime-t0)):offset;}
+function pos(){ if(!playing)return offset;
+  const el=Math.max(0,ctx.currentTime-t0);
+  if(loopOn){const a=winA(),z=winB(),L=z-a; if(L<=0)return offset;
+    return a+(((offset-a)%L+L)%L+el)%L;}
+  return Math.min(dur,offset+el);}
 function startAll(at){t0=ctx.currentTime+.06;
   sources=TRACKS.map(t=>{const b=B(t.key);if(!b)return null;
     const s=ctx.createBufferSource();s.buffer=b;s.connect(G[t.key]);
-    if(t.loose){s.loop=true;s.start(t0,at%b.duration);}else{s.start(t0,Math.min(at,b.duration));}return s;}).filter(Boolean);
+    if(t.loose){s.loop=true;s.start(t0,at%b.duration);}
+    else if(loopOn){const a=winA(),z=Math.min(winB(),b.duration);
+      s.loop=true;s.loopStart=a;s.loopEnd=z;s.start(t0,Math.min(Math.max(at,a),z));}
+    else{s.start(t0,Math.min(at,b.duration));}return s;}).filter(Boolean);
   offset=at;playing=true;$("play").textContent="Pause";applyGains();}
 function pauseAll(){if(!playing)return;offset=pos();
   if(sources)sources.forEach(s=>{try{s.stop()}catch(e){}});sources=null;playing=false;$("play").textContent="Play";}
@@ -184,11 +202,26 @@ $("seek").oninput=e=>{dragging=true;$("cur").textContent=fmt(e.target.value/1000
 $("seek").onchange=e=>{dragging=false;seekTo(e.target.value/100000*dur);};
 document.querySelectorAll(".mb").forEach(b=>b.onclick=async()=>{unlockAudio();await ensure();
   const was=playing;seekTo(parseFloat(b.dataset.t));if(!was)startAll(offset);});
+function winTxt(){const t=$("winTxt");
+  if(mA==null&&mB==null){t.textContent=loopOn?"whole track (looping)":"whole track";return;}
+  t.textContent=fmt(winA())+" – "+fmt(winB())+(loopOn?"  ↻":"");}
+function reArm(){const was=playing;const p=pos();pauseAll();offset=p;if(was)startAll(offset);winTxt();}
+$("setA").onclick=()=>{mA=pos(); if(mB!=null&&mB<=mA)mB=null; reArm();
+  $("say").textContent="Loop start "+fmt(winA());};
+$("setB").onclick=()=>{const p=pos(); if(p>winA()){mB=p;reArm();$("say").textContent="Loop end "+fmt(p);}};
+$("clrAB").onclick=()=>{mA=mB=null;reArm();$("say").textContent="Loop cleared";};
+$("loopBtn").onclick=()=>{loopOn=!loopOn;const b=$("loopBtn");
+  b.classList.toggle("on",loopOn);b.setAttribute("aria-pressed",loopOn);
+  b.innerHTML='Loop<span class="key">O</span>';reArm();
+  $("say").textContent="Loop "+(loopOn?"on":"off");};
 document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return;
   if(e.code==="Space"){e.preventDefault();$("play").click();}
   else if(e.key>="1"&&e.key<="6"){const t=TRACKS[+e.key-1];if(t)setActive(t.key);}
   else if(e.key==="l"||e.key==="L"){$("lvlBtn").click();}
   else if(e.key==="w"||e.key==="W"){setSrc(srcMode==="aac"?"wav":"aac");}
+  else if(e.key==="a"||e.key==="A"){$("setA").click();}
+  else if(e.key==="b"||e.key==="B"){$("setB").click();}
+  else if(e.key==="o"||e.key==="O"){$("loopBtn").click();}
   else if(e.key==="ArrowLeft"){e.preventDefault();seekTo(pos()-5);}
   else if(e.key==="ArrowRight"){e.preventDefault();seekTo(pos()+5);}});
 
@@ -210,8 +243,8 @@ function expiry(){ if(!EXPIRES)return;
   const row=document.querySelector('.vb[data-k="'+t.key+'"] .vs');
   if(left<=0){dropTrack(t.key);$("say").textContent="Reference expired";return;}
   if(row)row.textContent=t.sub+" \u00b7 "+Math.ceil(left/60000)+" min left";}
-setInterval(expiry,5000); expiry();
-function frame(){const p=pos();if(playing&&p>=dur){pauseAll();offset=0;}
+setInterval(expiry,5000); expiry(); winTxt();
+function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
   if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>

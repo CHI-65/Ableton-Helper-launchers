@@ -212,7 +212,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791130163988;
+const EXPIRES=1791130499218;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -241,7 +241,10 @@ function clampView(){ viewStart=Math.max(0,Math.min(viewStart,(dur||0)-vLen()));
 const t2x=(t,w)=>((t-viewStart)/vLen())*w;
 const x2t=(x,w)=>viewStart+(x/(w||1))*vLen();
 function centreOn(t){ viewStart=t-vLen()/2; clampView(); }
-function zLab(){ $("zLab").textContent = viewLen>0 ? (fmt(viewStart)+" – "+fmt(viewStart+vLen())) : "whole track"; }
+let _durTxt="";
+function zLab(){ $("zLab").textContent = viewLen>0 ? (fmt(viewStart)+" – "+fmt(viewStart+vLen())) : "whole track";
+  const e = viewLen>0 ? fmt(Math.min(dur,viewStart+vLen())) : fmt(dur);
+  if(e!==_durTxt){_durTxt=e;$("dur").textContent=e;}}
 const B=k=>BUF[srcMode][k];
 const FREQS=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,
              2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
@@ -400,7 +403,7 @@ Promise.all(TRACKS.map(t=>(t.b64?Promise.resolve(b64buf(t.b64))
    :fetch(AACBASE+t.key+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
    .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF.aac[t.key]=b;}).catch(e=>{dropTrack(t.key);})))
  .then(()=>{dur=Math.max(...TRACKS.filter(t=>!t.loose).map(t=>BUF.aac[t.key].duration));
-   $("dur").textContent=fmt(dur);$("play").disabled=false;$("loading").remove();zLab();
+   $("play").disabled=false;$("loading").remove();zLab();
    TRACKS.forEach(t=>t.b64=null);applyGains();srcUI();})
  .catch(e=>{$("loading").textContent="decode failed: "+e;});
 function dropTrack(k){const i=TRACKS.findIndex(t=>t.key===k); if(i<0)return;
@@ -555,6 +558,6 @@ function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;
   if(!dragging){ $("cur").textContent=fmt(p);
     if(viewLen>0&&playing&&(p<viewStart||p>viewStart+vLen())){centreOn(p);zLab();}
     $("seek").value=dur?Math.max(0,Math.min(100000,((p-viewStart)/vLen())*100000)):0; }
-  wings();eqAuto();requestAnimationFrame(frame);}
+  zLab();wings();eqAuto();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>

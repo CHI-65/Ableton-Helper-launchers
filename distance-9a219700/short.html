@@ -88,6 +88,18 @@
  .solobar.on{display:flex}
  .solobar .lab{font-weight:800;font-size:12px;color:var(--warn);letter-spacing:.06em}
  .solobar .lst{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink)}
+ .tg.eng{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 38%,transparent)}
+ .autobar{display:none;align-items:center;gap:10px;flex-wrap:wrap;border-radius:9px;padding:9px 13px;margin-bottom:10px;
+   border:1px solid var(--edge);background:var(--row);transition:background .15s,border-color .15s}
+ .autobar.on{display:flex}
+ .autobar.live{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,transparent)}
+ .autodot{width:12px;height:12px;border-radius:50%;background:var(--faint);flex:none}
+ .autobar.live .autodot{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent);
+   animation:pulse 1.1s ease-in-out infinite}
+ @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+ .autobar .st{font-weight:800;font-size:12.5px;letter-spacing:.05em;color:var(--muted)}
+ .autobar.live .st{color:var(--accent)}
+ .autobar .wh{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink)}
  .zero{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--edge);pointer-events:none}
  .regs{margin-top:12px;border-top:1px solid var(--edge);padding-top:11px}
  .reglist{display:flex;flex-direction:column;gap:6px;margin-top:9px}
@@ -166,6 +178,8 @@
      <button class="mb" id="eqFlat"><b>Flat</b><span>reset all</span></button>
      <button class="mb" id="eqCopy"><b>Copy curve</b><span>send it to me</span></button>
      <span class="win" id="eqInfo">30 bands · ⅓ octave · ±12 dB</span></div>
+   <div class="autobar" id="autoBar"><span class="autodot"></span>
+     <span class="st" id="autoSt">EQ OUT</span><span class="wh" id="autoWh"></span></div>
    <div class="solobar" id="soloBar"><span class="lab">SOLO</span><span class="lst" id="soloList"></span>
      <button class="mb" id="soloClr"><b>Clear</b><span>hear everything</span></button></div>
    <div class="eqscroll"><div class="eqbands" id="eqBands"></div></div>
@@ -187,7 +201,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791127997962;
+const EXPIRES=1791130015589;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -391,13 +405,25 @@ function curveNow(){return EQG.slice();}
 function applyCurve(g,ramp){const n=ctx.currentTime;
   EQ.forEach((b,i)=>{try{b.gain.cancelScheduledValues(n);}catch(e){}b.gain.setTargetAtTime(g[i],n,ramp);});}
 function regAt(t){for(let i=0;i<REG.length;i++){const r=REG[i];if(r.on&&t>=r.a&&t<r.b)return i;}return -1;}
+function setFaders(g){ g.forEach((v,i)=>{ EQG[i]=v;
+  const el=$("eqBands").querySelector('input[data-i="'+i+'"]'); if(el)el.value=Math.round(v*10);
+  eqRead(i); if(SOLO.has(i))soloGain(i); });}
+function engaged(){ return SOLO.size? false : (eqOn && (!autoOn || curReg>=0)); }
+function engUI(){ const e=engaged();
+  $("eqOn").classList.toggle("eng",e); $("eqBtn").classList.toggle("eng",e);
+  const bar=$("autoBar"); bar.classList.toggle("on",autoOn); bar.classList.toggle("live",autoOn&&curReg>=0);
+  if(autoOn){ $("autoSt").textContent=curReg>=0?"EQ IN":"EQ OUT";
+    $("autoWh").textContent=curReg>=0?("region "+(curReg+1)+"  "+fmt(REG[curReg].a)+"–"+fmt(REG[curReg].b))
+                                     :"between regions — curve flat"; }}
 function eqAuto(){
-  if(!autoOn){ if(curReg!==-2){curReg=-2;applyCurve(EQG,.01);} return; }
+  if(!autoOn){ if(curReg!==-2){curReg=-2;applyCurve(EQG,.01);engUI();} return; }
   const i=regAt(pos());
   if(i!==curReg){ curReg=i;
-    applyCurve(i<0?new Array(30).fill(0):REG[i].g,.04);   // 40 ms glide, no click at the seam
+    const g=i<0?new Array(30).fill(0):REG[i].g.slice();
+    applyCurve(g,.04);                 // 40 ms glide, no click at the seam
+    setFaders(g);                      // faders ride the automation so you can see it move
     $("autoInfo").textContent=i<0?"outside every region — EQ flat":("in region "+(i+1)+"  "+fmt(REG[i].a)+"–"+fmt(REG[i].b));
-    drawRegs(); }}
+    drawRegs(); engUI(); }}
 function drawRegs(){
   $("regList").innerHTML=REG.length?REG.map((r,i)=>{
     const n=r.g.filter(v=>Math.abs(v)>=0.05).length;
@@ -415,11 +441,14 @@ function drawRegs(){
 $("regAdd").onclick=()=>{ if(mA==null&&mB==null){$("say").textContent="Set A and B first";return;}
   REG.push({a:winA(),b:winB(),g:curveNow(),on:true}); REG.sort((x,y)=>x.a-y.a);
   curReg=-2; drawRegs(); $("say").textContent="Region added";};
+let workCurve=null;
 $("autoBtn").onclick=()=>{autoOn=!autoOn;const b=$("autoBtn");
+  if(autoOn) workCurve=EQG.slice();
+  else if(workCurve){ setFaders(workCurve); applyCurve(workCurve,.02); }
   b.classList.toggle("on",autoOn);b.textContent=autoOn?"Automation ON":"Automation OFF";
   b.setAttribute("aria-pressed",autoOn);curReg=-2;
   if(!autoOn)$("autoInfo").textContent="EQ applies to the whole track";
-  drawRegs();eqAuto();};
+  drawRegs();eqAuto();engUI();};
 $("regList").addEventListener("click",e=>{
   const row=e.target.closest(".reg"); if(!row)return; const i=+row.dataset.i, a=e.target.dataset.a;
   if(a==="del"){REG.splice(i,1);curReg=-2;drawRegs();}
@@ -445,7 +474,7 @@ $("eqBtn").onclick=()=>{const o=$("eqPanel").classList.toggle("open");
   $("eqBtn").classList.toggle("on",o);$("eqBtn").setAttribute("aria-expanded",o);
   $("eqBtn").innerHTML='G/EQ<span class="key">G</span>';};
 $("eqOn").onclick=()=>{eqOn=!eqOn;const b=$("eqOn");b.classList.toggle("on",eqOn);
-  b.textContent=eqOn?"EQ ON":"EQ OFF";b.setAttribute("aria-pressed",eqOn);wireEQ();soloUI();
+  b.textContent=eqOn?"EQ ON":"EQ OFF";b.setAttribute("aria-pressed",eqOn);wireEQ();soloUI();engUI();
   $("say").textContent="EQ "+(eqOn?"on":"bypassed");};
 $("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{EQG[i]=0;
   b.gain.cancelScheduledValues(ctx.currentTime); b.gain.setTargetAtTime(0,ctx.currentTime,.01);
@@ -471,7 +500,7 @@ function soloUI(){
                             :"30 bands · ⅓ octave · ±12 dB";}
 function toggleSolo(i){
   if(SOLO.has(i))SOLO.delete(i); else SOLO.add(i);
-  wireEQ(); soloUI(); soloGainsAll();
+  wireEQ(); soloUI(); soloGainsAll(); engUI();
   $("say").textContent=(SOLO.has(i)?"Solo on ":"Solo off ")+fLabel(i)+" hertz"
     +(SOLO.size?", "+SOLO.size+" soloed":", none soloed");}
 $("soloClr").onclick=()=>{SOLO.clear();wireEQ();soloUI();soloGainsAll();$("say").textContent="Solos cleared";};
@@ -488,7 +517,7 @@ $("soloClr").onclick=()=>{SOLO.clear();wireEQ();soloUI();soloGainsAll();$("say")
     const inp=e.target.closest('input[type=range]'); if(!inp)return;
     if(e.key==="s"||e.key==="S"){e.preventDefault();toggleSolo(+inp.dataset.i);}});
 })();
-FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI();
+FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI(); engUI();
 setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
 window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}

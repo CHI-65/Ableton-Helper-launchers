@@ -1,4 +1,4 @@
-<!doctype html><meta charset="utf-8"><title>MasterMind v2.5 — Distance</title>
+<!doctype html><meta charset="utf-8"><title>MasterMind v2.6 — Distance</title>
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
@@ -171,9 +171,9 @@
 <div class="wrap"><main class="card">
  <div class="stale" id="stale"><span>A newer version is out — you are seeing a cached page.</span>
    <button id="reloadBtn">Reload</button></div>
- <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.5</span></div>
+ <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.6</span></div>
   <div class="eyebrow" style="margin:9px 0 8px"><span class="rec"></span>Master A/B · sample-synced</div>
-  <h1>Distance — six masters</h1>
+  <h1>Distance — master comparison</h1>
   <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
    difference and not the gap. Level match is on by default — leave it on to judge the master, turn it
    off to hear the real loudness difference. <b>edit (+.5)</b> is your new bounce. <b>REFERENCE</b> is the Culbertson track — 63 s on its
@@ -243,13 +243,13 @@
  <div class="sr" aria-live="polite" id="say"></div>
 </main></div>
 <script>
-const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
+const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "rebuild", "name": "STEM REBUILD", "sub": "from stems + your ride", "lufs": -17.0, "tp": "-1.00", "crest": "17.95", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "from your bounce", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791133727449;
+const EXPIRES=1791150524467;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
-const VERSION="2.5";
+const VERSION="2.6";
 async function checkVer(){ try{
     const r=await fetch("version.txt?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)return; const v=(await r.text()).trim();

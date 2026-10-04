@@ -66,6 +66,19 @@
  .wing:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
  .wing.top{top:0}.wing.bot{bottom:0}
  .wing.set{background:var(--accent);color:#fff}
+ .wing.drag{cursor:ew-resize;touch-action:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+ .eqpanel{border-top:1px solid var(--edge);padding:14px 16px 16px;display:none}
+ .eqpanel.open{display:block}
+ .eqtop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+ .eqscroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:6px}
+ .eqbands{display:flex;gap:3px;min-width:max-content;align-items:flex-end}
+ .band{display:flex;flex-direction:column;align-items:center;width:38px;flex:none}
+ .band .v{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted);height:14px;font-variant-numeric:tabular-nums}
+ .band .slot{height:132px;width:38px;display:flex;align-items:center;justify-content:center;position:relative}
+ .band input[type=range]{width:124px;height:26px;margin:0;transform:rotate(-90deg);accent-color:var(--accent);cursor:pointer}
+ .band .f{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint);height:14px;margin-top:3px}
+ .band.act .v{color:var(--accent);font-weight:700}
+ .zero{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--edge);pointer-events:none}
  .mk{position:absolute;width:2px;top:30px;bottom:30px;background:var(--accent);opacity:.55;z-index:0;display:none}
  .mk.on{display:block}
  .lbadge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--edge);border-radius:8px;
@@ -124,6 +137,14 @@
    <span class="lbadge" id="lbadge"><span id="lstate">Playing</span><span class="n" id="lnum">1</span><span class="nm" id="lname"></span></span>
   </div></div>
  <div class="marks"><div class="mt">Jump to</div><div class="mg" id="marks"></div></div>
+ <div class="marks"><button class="tg" id="eqBtn" aria-expanded="false" style="height:34px">G/EQ<span class="key">G</span></button></div>
+ <div class="eqpanel" id="eqPanel">
+   <div class="eqtop"><button class="tg on" id="eqOn" aria-pressed="true" style="height:32px">EQ ON</button>
+     <button class="mb" id="eqFlat"><b>Flat</b><span>reset all</span></button>
+     <button class="mb" id="eqCopy"><b>Copy curve</b><span>send it to me</span></button>
+     <span class="win" id="eqInfo">30 bands · ⅓ octave · ±12 dB</span></div>
+   <div class="eqscroll"><div class="eqbands" id="eqBands"></div></div>
+ </div>
  <p class="hint"><b>Keys:</b> <span class="key">space</span> play/pause &nbsp;
   <span class="key">1</span>–<span class="key">6</span> switch version &nbsp;
   <span class="key">L</span> level match &nbsp; <span class="key">W</span> AAC/WAV &nbsp;
@@ -135,7 +156,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791114395672;
+const EXPIRES=1791127113956;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -159,7 +180,15 @@ let sources=null,playing=false,offset=0,t0=0,dur=0,dragging=false;
 let mA=null,mB=null,loopOn=false;
 const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
 const B=k=>BUF[srcMode][k];
-TRACKS.forEach(t=>{const g=ctx.createGain();g.gain.value=0;g.connect(ctx.destination);G[t.key]=g;});
+const FREQS=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,
+             2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
+const master=ctx.createGain(); let eqOn=true; const EQG=new Array(30).fill(0);
+const EQ=FREQS.map(f=>{const b=ctx.createBiquadFilter();b.type="peaking";b.frequency.value=f;b.Q.value=4.32;b.gain.value=0;return b;});
+function wireEQ(){ try{master.disconnect();}catch(e){} EQ.forEach(b=>{try{b.disconnect();}catch(e){}});
+  if(eqOn){let n=master;EQ.forEach(b=>{n.connect(b);n=b;});n.connect(ctx.destination);}
+  else master.connect(ctx.destination);}
+wireEQ();
+TRACKS.forEach(t=>{const g=ctx.createGain();g.gain.value=0;g.connect(master);G[t.key]=g;});
 function gainFor(t){return levelMatch?Math.pow(10,(TARGET-t.lufs)/20):1;}
 function applyGains(){const n=ctx.currentTime;
   TRACKS.forEach(t=>{const g=G[t.key];
@@ -213,7 +242,7 @@ function startAll(at){t0=ctx.currentTime+.06;
     if(t.loose){s.loop=true;s.start(t0,at%b.duration);}
     else if(loopOn){const a=winA(),z=Math.min(winB(),b.duration);
       s.loop=true;s.loopStart=a;s.loopEnd=z;s.start(t0,Math.min(Math.max(at,a),z));}
-    else{s.start(t0,Math.min(at,b.duration));}return s;}).filter(Boolean);
+    else{s.start(t0,Math.min(at,b.duration));}s._k=t.key;s._loose=!!t.loose;return s;}).filter(Boolean);
   offset=at;playing=true;$("play").textContent="Pause";applyGains();}
 function pauseAll(){if(!playing)return;offset=pos();
   if(sources)sources.forEach(s=>{try{s.stop()}catch(e){}});sources=null;playing=false;$("play").textContent="Play";}
@@ -234,18 +263,39 @@ function badge(){const i=TRACKS.findIndex(t=>t.key===active); if(i<0)return;
   $("lbadge").style.borderColor=loopOn?"var(--"+t.key+")":"var(--edge)";}
 function wings(){const sw=$("seek"),pct=(+sw.value)/100000;
   const w=sw.getBoundingClientRect().width||1, left=pct*w;
-  $("wingA").style.left=left+"px"; $("wingB").style.left=left+"px";
   const pp=v=>((v/(dur||1))*w)+"px";
+  if(loopOn){ $("wingA").style.left=pp(winA()); $("wingB").style.left=pp(winB()); }
+  else { $("wingA").style.left=left+"px"; $("wingB").style.left=left+"px"; }
+  $("wingA").classList.toggle("drag",loopOn); $("wingB").classList.toggle("drag",loopOn);
   if(mA!=null){$("mkA").style.left=pp(mA);$("mkA").classList.add("on");}else $("mkA").classList.remove("on");
   if(mB!=null){$("mkB").style.left=pp(mB);$("mkB").classList.add("on");}else $("mkB").classList.remove("on");
   $("wingA").classList.toggle("set",mA!=null); $("wingB").classList.toggle("set",mB!=null);}
+function liveLoop(){ if(!sources)return; const a=winA(),z=winB();
+  sources.forEach(s=>{ if(!s||s._loose)return;
+    try{s.loopStart=a;s.loopEnd=Math.min(z,s.buffer.duration);}catch(e){} });}
+let justDragged=false;
+function dragWing(el,which){
+  let on=false,moved=false;
+  el.addEventListener("pointerdown",e=>{ if(!loopOn)return; on=true;moved=false;
+    try{el.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); },{passive:false});
+  el.addEventListener("pointermove",e=>{ if(!on)return; moved=true;
+    const r=$("seek").getBoundingClientRect();
+    let t=((e.clientX-r.left)/(r.width||1))*dur; t=Math.max(0,Math.min(dur,t));
+    if(which==="A") mA=Math.min(t,(mB!=null?mB:dur)-0.25);
+    else            mB=Math.max(t,winA()+0.25);
+    liveLoop(); wings(); winTxt(); },{passive:true});
+  const end=e=>{ if(!on)return; on=false;
+    try{el.releasePointerCapture(e.pointerId);}catch(_){}
+    if(moved){ justDragged=true; reArm(); setTimeout(()=>justDragged=false,60); } };
+  el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);}
+dragWing($("wingA"),"A"); dragWing($("wingB"),"B");
 function winTxt(){wings();badge();const t=$("winTxt");
   if(mA==null&&mB==null){t.textContent=loopOn?"whole track (looping)":"whole track";return;}
   t.textContent=fmt(winA())+" – "+fmt(winB())+(loopOn?"  ↻":"");}
 function reArm(){const was=playing;const p=pos();pauseAll();offset=p;if(was)startAll(offset);winTxt();}
-$("wingA").onclick=()=>{mA=pos(); if(mB!=null&&mB<=mA)mB=null; reArm();
+$("wingA").onclick=()=>{if(justDragged)return;mA=pos(); if(mB!=null&&mB<=mA)mB=null; reArm();
   $("say").textContent="Loop start "+fmt(winA());};
-$("wingB").onclick=()=>{const p=pos(); if(p>winA()){mB=p;reArm();$("say").textContent="Loop end "+fmt(p);}};
+$("wingB").onclick=()=>{if(justDragged)return;const p=pos(); if(p>winA()){mB=p;reArm();$("say").textContent="Loop end "+fmt(p);}};
 $("clrAB").onclick=()=>{mA=mB=null;reArm();$("say").textContent="Loop cleared";};
 $("loopBtn").onclick=()=>{loopOn=!loopOn;const b=$("loopBtn");
   b.classList.toggle("on",loopOn);b.setAttribute("aria-pressed",loopOn);
@@ -259,6 +309,7 @@ document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return;
   else if(e.key==="a"||e.key==="A"){$("wingA").click();}
   else if(e.key==="b"||e.key==="B"){$("wingB").click();}
   else if(e.key==="o"||e.key==="O"){$("loopBtn").click();}
+  else if(e.key==="g"||e.key==="G"){$("eqBtn").click();}
   else if(e.key==="ArrowLeft"){e.preventDefault();seekTo(pos()-5);}
   else if(e.key==="ArrowRight"){e.preventDefault();seekTo(pos()+5);}});
 
@@ -280,6 +331,36 @@ function expiry(){ if(!EXPIRES)return;
   const row=document.querySelector('.vb[data-k="'+t.key+'"] .vs');
   if(left<=0){dropTrack(t.key);$("say").textContent="Reference expired";return;}
   if(row)row.textContent=t.sub+" \u00b7 "+Math.ceil(left/60000)+" min left";}
+$("eqBands").innerHTML=FREQS.map((f,i)=>{
+  const lbl=f>=1000?(f/1000)+"k":String(f);
+  return `<div class="band" data-i="${i}"><span class="v" id="ev${i}">0.0</span>
+   <span class="slot"><span class="zero"></span>
+   <input type="range" min="-120" max="120" step="1" value="0" data-i="${i}"
+     aria-label="${lbl} hertz"></span><span class="f">${lbl}</span></div>`;}).join("");
+function eqRead(i){const v=EQG[i];const e=$("ev"+i);
+  e.textContent=(v>0?"+":"")+v.toFixed(1);
+  e.parentElement.classList.toggle("act",Math.abs(v)>=0.05);}
+$("eqBands").addEventListener("input",e=>{ const i=+e.target.dataset.i; if(isNaN(i))return;
+  const v=(+e.target.value)/10; EQG[i]=v;
+  EQ[i].gain.cancelScheduledValues(ctx.currentTime);
+  EQ[i].gain.setTargetAtTime(v,ctx.currentTime,.01); eqRead(i);});
+$("eqBtn").onclick=()=>{const o=$("eqPanel").classList.toggle("open");
+  $("eqBtn").classList.toggle("on",o);$("eqBtn").setAttribute("aria-expanded",o);
+  $("eqBtn").innerHTML='G/EQ<span class="key">G</span>';};
+$("eqOn").onclick=()=>{eqOn=!eqOn;const b=$("eqOn");b.classList.toggle("on",eqOn);
+  b.textContent=eqOn?"EQ ON":"EQ OFF";b.setAttribute("aria-pressed",eqOn);wireEQ();
+  $("say").textContent="EQ "+(eqOn?"on":"bypassed");};
+$("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{EQG[i]=0;
+  b.gain.cancelScheduledValues(ctx.currentTime); b.gain.setTargetAtTime(0,ctx.currentTime,.01);
+  const el=$("eqBands").querySelector('input[data-i="'+i+'"]'); if(el)el.value=0; eqRead(i);});
+  $("say").textContent="EQ flat";};
+$("eqCopy").onclick=async()=>{
+  const nz=EQG.map((v,i)=>[FREQS[i],Math.round(v*10)/10]).filter(x=>Math.abs(x[1])>=0.05);
+  const txt=nz.length?("EQ curve (1/3 oct): "+nz.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", ")):"EQ is flat";
+  let ok=false; try{await navigator.clipboard.writeText(txt);ok=true;}catch(e){}
+  const b=$("eqCopy"); b.innerHTML=ok?"<b>Copied</b><span>paste in chat</span>":"<b>"+txt.slice(0,40)+"</b><span>select manually</span>";
+  setTimeout(()=>{b.innerHTML="<b>Copy curve</b><span>send it to me</span>";},3000);};
+FREQS.forEach((f,i)=>eqRead(i));
 setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
 window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}

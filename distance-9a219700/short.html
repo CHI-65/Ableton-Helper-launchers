@@ -187,7 +187,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791127895579;
+const EXPIRES=1791127997962;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -219,13 +219,20 @@ const SOLO=new Set();
 const soloBus=ctx.createGain(); soloBus.gain.value=2.0;   // +6 dB makeup; a narrow band is much quieter
 const SOLOB=FREQS.map(f=>{const a=ctx.createBiquadFilter(),b=ctx.createBiquadFilter();
   a.type=b.type="bandpass"; a.frequency.value=b.frequency.value=f; a.Q.value=b.Q.value=4.32; return [a,b];});
+const SOLOG=FREQS.map(()=>{const g=ctx.createGain();g.gain.value=1;return g;});
+function soloGain(i,ramp){ const v=Math.pow(10,(EQG[i]||0)/20), n=ctx.currentTime;
+  try{SOLOG[i].gain.cancelScheduledValues(n);}catch(e){}
+  SOLOG[i].gain.setTargetAtTime(v,n,ramp===undefined?.01:ramp);}
+function soloGainsAll(){FREQS.forEach((f,i)=>soloGain(i,.01));}
 function wireEQ(){
   try{master.disconnect();}catch(e){}
   EQ.forEach(b=>{try{b.disconnect();}catch(e){}});
   SOLOB.forEach(pr=>{try{pr[0].disconnect();}catch(e){}try{pr[1].disconnect();}catch(e){}});
+  SOLOG.forEach(g=>{try{g.disconnect();}catch(e){}});
   try{soloBus.disconnect();}catch(e){}
   if(SOLO.size){                                   // soloed bands bypass the curve entirely
-    SOLO.forEach(i=>{const pr=SOLOB[i];master.connect(pr[0]);pr[0].connect(pr[1]);pr[1].connect(soloBus);});
+    SOLO.forEach(i=>{const pr=SOLOB[i];master.connect(pr[0]);pr[0].connect(pr[1]);
+      pr[1].connect(SOLOG[i]);SOLOG[i].connect(soloBus);soloGain(i,.001);});
     soloBus.connect(ctx.destination);
   } else if(eqOn){ let n=master; EQ.forEach(b=>{n.connect(b);n=b;}); n.connect(ctx.destination); }
   else master.connect(ctx.destination);}
@@ -418,7 +425,8 @@ $("regList").addEventListener("click",e=>{
   if(a==="del"){REG.splice(i,1);curReg=-2;drawRegs();}
   else if(a==="load"){REG[i].g.forEach((v,k)=>{EQG[k]=v;
      const el=$("eqBands").querySelector('input[data-i="'+k+'"]'); if(el)el.value=Math.round(v*10); eqRead(k);});
-     if(!autoOn)applyCurve(EQG,.02); $("say").textContent="Region "+(i+1)+" loaded into the faders";}
+     if(!autoOn)applyCurve(EQG,.02); soloGainsAll();
+     $("say").textContent="Region "+(i+1)+" loaded into the faders";}
   else if(a==="upd"){REG[i].g=curveNow();curReg=-2;drawRegs();$("say").textContent="Region "+(i+1)+" updated";}});
 $("regList").addEventListener("change",e=>{
   const row=e.target.closest(".reg"); if(!row||e.target.dataset.a!=="on")return;
@@ -430,7 +438,9 @@ $("eqBands").addEventListener("input",e=>{ const i=+e.target.dataset.i; if(isNaN
   const v=(+e.target.value)/10; EQG[i]=v;
   if(autoOn&&curReg>=0){REG[curReg].g[i]=v;drawRegs();}   // editing the region you are hearing
   EQ[i].gain.cancelScheduledValues(ctx.currentTime);
-  EQ[i].gain.setTargetAtTime(v,ctx.currentTime,.01); eqRead(i);});
+  EQ[i].gain.setTargetAtTime(v,ctx.currentTime,.01);
+  if(SOLO.has(i))soloGain(i);                       // audible while soloed
+  eqRead(i);});
 $("eqBtn").onclick=()=>{const o=$("eqPanel").classList.toggle("open");
   $("eqBtn").classList.toggle("on",o);$("eqBtn").setAttribute("aria-expanded",o);
   $("eqBtn").innerHTML='G/EQ<span class="key">G</span>';};
@@ -439,6 +449,7 @@ $("eqOn").onclick=()=>{eqOn=!eqOn;const b=$("eqOn");b.classList.toggle("on",eqOn
   $("say").textContent="EQ "+(eqOn?"on":"bypassed");};
 $("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{EQG[i]=0;
   b.gain.cancelScheduledValues(ctx.currentTime); b.gain.setTargetAtTime(0,ctx.currentTime,.01);
+  if(SOLO.has(i))soloGain(i);
   const el=$("eqBands").querySelector('input[data-i="'+i+'"]'); if(el)el.value=0; eqRead(i);});
   $("say").textContent="EQ flat";};
 $("eqCopy").onclick=async()=>{
@@ -456,14 +467,14 @@ function soloUI(){
     if(el)el.classList.toggle("solo",SOLO.has(i));});
   const on=SOLO.size>0; $("soloBar").classList.toggle("on",on);
   $("soloList").textContent=on?[...SOLO].sort((a,b)=>a-b).map(i=>fLabel(i)+" Hz").join("  ·  "):"";
-  $("eqInfo").textContent=on?("soloing "+SOLO.size+" band"+(SOLO.size>1?"s":"")+" — curve bypassed")
+  $("eqInfo").textContent=on?("soloing "+SOLO.size+" band"+(SOLO.size>1?"s":"")+" — fader still live")
                             :"30 bands · ⅓ octave · ±12 dB";}
 function toggleSolo(i){
   if(SOLO.has(i))SOLO.delete(i); else SOLO.add(i);
-  wireEQ(); soloUI();
+  wireEQ(); soloUI(); soloGainsAll();
   $("say").textContent=(SOLO.has(i)?"Solo on ":"Solo off ")+fLabel(i)+" hertz"
     +(SOLO.size?", "+SOLO.size+" soloed":", none soloed");}
-$("soloClr").onclick=()=>{SOLO.clear();wireEQ();soloUI();$("say").textContent="Solos cleared";};
+$("soloClr").onclick=()=>{SOLO.clear();wireEQ();soloUI();soloGainsAll();$("say").textContent="Solos cleared";};
 (function(){ let tmr=null,idx=-1,moved=false,x0=0,y0=0;
   const stop=()=>{clearTimeout(tmr);tmr=null;idx=-1;};
   $("eqBands").addEventListener("pointerdown",e=>{

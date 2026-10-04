@@ -10,5 +10,6 @@ To take it down: delete this directory, commit, push.
 - `index.html` — 60 s focus excerpt (1:05–2:05). Light; use this on iPad.
 - `full.html`  — full length. Heavier; may reload on iPad.
 
-The Brian Culbertson reference is deliberately NOT published here — it is a
-commercial recording and not ours to distribute. It stays on the Mac only.
+The Brian Culbertson reference (63 s) is included on a 20-minute timer: the
+player hides it once the clock runs out, and a scheduled job removes the two
+reference .m4a files from this repo and pushes. See expire_reference.sh.

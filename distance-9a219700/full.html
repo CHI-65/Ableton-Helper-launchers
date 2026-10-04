@@ -104,8 +104,9 @@
  <div class="sr" aria-live="polite" id="say"></div>
 </main></div>
 <script>
-const TRACKS=[{"key": "old", "name": "OLD", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "NEW", "sub": "edit. 2 \u2014 piano down", "lufs": -16.6, "tp": "+0.07", "crest": "18.68", "loose": false, "b64": null}, {"key": "matched", "name": "MATCHED", "sub": "edit. 2 + DC fix + drive", "lufs": -12.1, "tp": "-1.00", "crest": "13.32", "loose": false, "b64": null}, {"key": "refdynamic", "name": "REF-MATCH", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "refloud", "name": "REF-MATCH LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.17", "loose": false, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
+const TRACKS=[{"key": "old", "name": "OLD", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "NEW", "sub": "edit. 2 \u2014 piano down", "lufs": -16.6, "tp": "+0.07", "crest": "18.68", "loose": false, "b64": null}, {"key": "matched", "name": "MATCHED", "sub": "edit. 2 + DC fix + drive", "lufs": -12.1, "tp": "-1.00", "crest": "13.32", "loose": false, "b64": null}, {"key": "refdynamic", "name": "REF-MATCH", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "refloud", "name": "REF-MATCH LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.17", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
+const EXPIRES=1791103829936;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -194,11 +195,22 @@ document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return;
 fetch(WAVBASE+"old.wav",{method:"HEAD"}).then(r=>{if(r.ok){wavUp=true;srcUI();}}).catch(()=>{});
 Promise.all(TRACKS.map(t=>(t.b64?Promise.resolve(b64buf(t.b64))
    :fetch(AACBASE+t.key+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
-   .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF.aac[t.key]=b;})))
+   .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF.aac[t.key]=b;}).catch(e=>{dropTrack(t.key);})))
  .then(()=>{dur=Math.max(...TRACKS.filter(t=>!t.loose).map(t=>BUF.aac[t.key].duration));
    $("dur").textContent=fmt(dur);$("play").disabled=false;$("loading").remove();
    TRACKS.forEach(t=>t.b64=null);applyGains();srcUI();})
  .catch(e=>{$("loading").textContent="decode failed: "+e;});
+function dropTrack(k){const i=TRACKS.findIndex(t=>t.key===k); if(i<0)return;
+  TRACKS.splice(i,1); const b=document.querySelector('.vb[data-k="'+k+'"]'); if(b)b.remove();
+  delete BUF.aac[k]; delete BUF.wav[k];
+  if(active===k&&TRACKS.length){pauseAll();setActive(TRACKS[0].key);}}
+function expiry(){ if(!EXPIRES)return;
+  const t=TRACKS.find(x=>x.loose); if(!t)return;
+  const left=EXPIRES-Date.now();
+  const row=document.querySelector('.vb[data-k="'+t.key+'"] .vs');
+  if(left<=0){dropTrack(t.key);$("say").textContent="Reference expired";return;}
+  if(row)row.textContent=t.sub+" \u00b7 "+Math.ceil(left/60000)+" min left";}
+setInterval(expiry,5000); expiry();
 function frame(){const p=pos();if(playing&&p>=dur){pauseAll();offset=0;}
   if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
 requestAnimationFrame(frame);

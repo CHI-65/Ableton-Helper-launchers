@@ -1,4 +1,4 @@
-<!doctype html><meta charset="utf-8"><title>MasterMind v2.0 — Distance</title>
+<!doctype html><meta charset="utf-8"><title>MasterMind v2.1 — Distance</title>
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
@@ -110,6 +110,16 @@
  .autobar .st{font-weight:800;font-size:12.5px;letter-spacing:.05em;color:var(--muted)}
  .autobar.live .st{color:var(--accent)}
  .autobar .wh{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink)}
+ .glide{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--row);border:1px solid var(--edge);
+   border-radius:9px;padding:9px 13px;margin-bottom:10px;transition:border-color .15s,background .15s}
+ .glide.dis{opacity:.45}
+ .glide.gliding{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent);
+   box-shadow:0 0 0 3px color-mix(in srgb,var(--warn) 25%,transparent)}
+ .glide .gl{font-weight:700;font-size:12.5px;color:var(--muted);white-space:nowrap}
+ .glide.gliding .gl{color:var(--warn)}
+ .glide input[type=range]{flex:1;min-width:130px;accent-color:var(--accent);height:28px}
+ .glide .gv{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:700;color:var(--ink);
+   min-width:62px;text-align:right;font-variant-numeric:tabular-nums}
  .zero{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--edge);pointer-events:none}
  .regs{margin-top:12px;border-top:1px solid var(--edge);padding-top:11px}
  .reglist{display:flex;flex-direction:column;gap:6px;margin-top:9px}
@@ -157,7 +167,7 @@
 <div class="wrap"><main class="card">
  <div class="stale" id="stale"><span>A newer version is out — you are seeing a cached page.</span>
    <button id="reloadBtn">Reload</button></div>
- <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.0</span></div>
+ <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.1</span></div>
   <div class="eyebrow" style="margin:9px 0 8px"><span class="rec"></span>Master A/B · sample-synced</div>
   <h1>Distance — six masters</h1>
   <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
@@ -204,6 +214,9 @@
      <span class="win" id="eqInfo">30 bands · ⅓ octave · ±12 dB</span></div>
    <div class="autobar" id="autoBar"><span class="autodot"></span>
      <span class="st" id="autoSt">EQ OUT</span><span class="wh" id="autoWh"></span></div>
+   <div class="glide dis" id="glideBox"><span class="gl" id="glLbl">Glide · no region</span>
+     <input type="range" id="glide" min="0" max="3000" step="10" value="0" aria-label="Glide time in milliseconds">
+     <span class="gv" id="glVal">0 ms</span></div>
    <div class="solobar" id="soloBar"><span class="lab">SOLO</span><span class="lst" id="soloList"></span>
      <button class="mb" id="soloClr"><b>Clear</b><span>hear everything</span></button></div>
    <div class="eqscroll"><div class="eqbands" id="eqBands"></div></div>
@@ -225,11 +238,11 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791130837716;
+const EXPIRES=1791132112283;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
-const VERSION="2.0";
+const VERSION="2.1";
 async function checkVer(){ try{
     const r=await fetch("version.txt?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)return; const v=(await r.text()).trim();
@@ -446,13 +459,28 @@ $("eqBands").innerHTML=FREQS.map((f,i)=>{
      aria-label="${lbl} hertz"></span><span class="f">${lbl}</span></div>`;}).join("");
 let REG=[], autoOn=false, curReg=-2;
 function curveNow(){return EQG.slice();}
-function applyCurve(g,ramp){const n=ctx.currentTime;
-  EQ.forEach((b,i)=>{try{b.gain.cancelScheduledValues(n);}catch(e){}b.gain.setTargetAtTime(g[i],n,ramp);});}
+let glideEnd=0;
+function applyCurve(g,secs){const n=ctx.currentTime; secs=Math.max(0,secs||0);
+  EQ.forEach((b,i)=>{ try{b.gain.cancelScheduledValues(n);}catch(e){}
+    if(secs<=0.005){ b.gain.setValueAtTime(g[i],n); }
+    else { b.gain.setValueAtTime(b.gain.value,n); b.gain.linearRampToValueAtTime(g[i],n+secs); } });
+  glideEnd=n+secs;}
 function regAt(t){for(let i=0;i<REG.length;i++){const r=REG[i];if(r.on&&t>=r.a&&t<r.b)return i;}return -1;}
 function setFaders(g){ g.forEach((v,i)=>{ EQG[i]=v;
   const el=$("eqBands").querySelector('input[data-i="'+i+'"]'); if(el)el.value=Math.round(v*10);
   eqRead(i); if(SOLO.has(i))soloGain(i); });}
 function engaged(){ return SOLO.size? false : (eqOn && (!autoOn || curReg>=0)); }
+function glideUI(){
+  const box=$("glideBox"), live=autoOn&&curReg>=0;
+  box.classList.toggle("dis",!live);
+  $("glide").disabled=!live;
+  const ms = live ? Math.round((REG[curReg].gl!==undefined?REG[curReg].gl:0.25)*1000) : 0;
+  $("glide").value=ms; $("glVal").textContent=ms+" ms";
+  $("glLbl").textContent = live ? ("Glide · region "+(curReg+1)) : "Glide · no region";}
+$("glide").addEventListener("input",e=>{
+  if(!(autoOn&&curReg>=0))return;
+  const ms=+e.target.value; REG[curReg].gl=ms/1000;
+  $("glVal").textContent=ms+" ms"; drawRegs();});
 function engUI(){ const e=engaged();
   $("eqOn").classList.toggle("eng",e); $("eqBtn").classList.toggle("eng",e);
   const bar=$("autoBar"); bar.classList.toggle("on",autoOn); bar.classList.toggle("live",autoOn&&curReg>=0);
@@ -460,20 +488,23 @@ function engUI(){ const e=engaged();
     $("autoWh").textContent=curReg>=0?("region "+(curReg+1)+"  "+fmt(REG[curReg].a)+"–"+fmt(REG[curReg].b))
                                      :"between regions — curve flat"; }}
 function eqAuto(){
-  if(!autoOn){ if(curReg!==-2){curReg=-2;applyCurve(EQG,.01);engUI();} return; }
-  const i=regAt(pos());
-  if(i!==curReg){ curReg=i;
+  if(!autoOn){ if(curReg!==-2){curReg=-2;applyCurve(EQG,.02);engUI();} return; }
+  const i=regAt(pos()); 
+  if(i!==curReg){ const prev=curReg; curReg=i;
     const g=i<0?new Array(30).fill(0):REG[i].g.slice();
-    applyCurve(g,.04);                 // 40 ms glide, no click at the seam
+    // entering uses the region you are going into; leaving uses the one you came from
+    const gl = i>=0 ? (REG[i].gl!==undefined?REG[i].gl:0.25)
+                    : (prev>=0&&REG[prev]?(REG[prev].gl!==undefined?REG[prev].gl:0.25):0.02);
+    applyCurve(g,gl);
     setFaders(g);                      // faders ride the automation so you can see it move
     $("autoInfo").textContent=i<0?"outside every region — EQ flat":("in region "+(i+1)+"  "+fmt(REG[i].a)+"–"+fmt(REG[i].b));
-    drawRegs(); engUI(); }}
+    drawRegs(); engUI(); glideUI(); }}
 function drawRegs(){
   $("regList").innerHTML=REG.length?REG.map((r,i)=>{
     const n=r.g.filter(v=>Math.abs(v)>=0.05).length;
     return `<div class="reg${i===curReg&&autoOn?" live":""}" data-i="${i}">
       <input type="checkbox" ${r.on?"checked":""} data-a="on" aria-label="Enable region ${i+1}">
-      <span><span class="rg">${fmt(r.a)} – ${fmt(r.b)}</span> <span class="cnt">· ${n} band${n==1?"":"s"}</span></span>
+      <span><span class="rg">${fmt(r.a)} – ${fmt(r.b)}</span> <span class="cnt">· ${n} band${n==1?"":"s"} · glide ${Math.round((r.gl!==undefined?r.gl:0.25)*1000)} ms</span></span>
       <button data-a="load">Load</button><button data-a="upd">Update</button>
       <button class="del" data-a="del" aria-label="Delete region ${i+1}">×</button></div>`;}).join("")
     : '<span class="win">No regions yet. Set A and B on the slider, dial a curve, then Add region.</span>';
@@ -484,22 +515,22 @@ function drawRegs(){
     d.style.left=x1+"px";d.style.width=(x2-x1)+"px";
     $("seek").parentElement.appendChild(d);});}
 $("regAdd").onclick=()=>{ if(mA==null&&mB==null){$("say").textContent="Set A and B first";return;}
-  REG.push({a:winA(),b:winB(),g:curveNow(),on:true}); REG.sort((x,y)=>x.a-y.a);
+  REG.push({a:winA(),b:winB(),g:curveNow(),on:true,gl:0.25}); REG.sort((x,y)=>x.a-y.a);
   curReg=-2; drawRegs(); $("say").textContent="Region added";};
 let workCurve=null;
 $("autoBtn").onclick=()=>{autoOn=!autoOn;const b=$("autoBtn");
   if(autoOn) workCurve=EQG.slice();
-  else if(workCurve){ setFaders(workCurve); applyCurve(workCurve,.02); }
+  else if(workCurve){ setFaders(workCurve); applyCurve(workCurve,.05); }
   b.classList.toggle("on",autoOn);b.textContent=autoOn?"Automation ON":"Automation OFF";
   b.setAttribute("aria-pressed",autoOn);curReg=-2;
   if(!autoOn)$("autoInfo").textContent="EQ applies to the whole track";
-  drawRegs();eqAuto();engUI();};
+  drawRegs();eqAuto();engUI();glideUI();};
 $("regList").addEventListener("click",e=>{
   const row=e.target.closest(".reg"); if(!row)return; const i=+row.dataset.i, a=e.target.dataset.a;
   if(a==="del"){REG.splice(i,1);curReg=-2;drawRegs();}
   else if(a==="load"){REG[i].g.forEach((v,k)=>{EQG[k]=v;
      const el=$("eqBands").querySelector('input[data-i="'+k+'"]'); if(el)el.value=Math.round(v*10); eqRead(k);});
-     if(!autoOn)applyCurve(EQG,.02); soloGainsAll();
+     if(!autoOn)applyCurve(EQG,.05); soloGainsAll();
      $("say").textContent="Region "+(i+1)+" loaded into the faders";}
   else if(a==="upd"){REG[i].g=curveNow();curReg=-2;drawRegs();$("say").textContent="Region "+(i+1)+" updated";}});
 $("regList").addEventListener("change",e=>{
@@ -531,7 +562,7 @@ $("eqCopy").onclick=async()=>{
   let txt=nz.length?("EQ curve (1/3 oct): "+nz.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", ")):"EQ is flat";
   if(REG.length)txt+="\nAutomation "+(autoOn?"ON":"OFF")+" — "+REG.map((r,i)=>{
     const b=r.g.map((v,k)=>[FREQS[k],Math.round(v*10)/10]).filter(x=>Math.abs(x[1])>=0.05);
-    return "["+fmt(r.a)+"-"+fmt(r.b)+(r.on?"":" (off)")+": "+(b.length?b.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", "):"flat")+"]";}).join(" ");
+    return "["+fmt(r.a)+"-"+fmt(r.b)+(r.on?"":" (off)")+" glide "+Math.round((r.gl!==undefined?r.gl:0.25)*1000)+"ms: "+(b.length?b.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", "):"flat")+"]";}).join(" ");
   let ok=false; try{await navigator.clipboard.writeText(txt);ok=true;}catch(e){}
   const b=$("eqCopy"); b.innerHTML=ok?"<b>Copied</b><span>paste in chat</span>":"<b>"+txt.slice(0,40)+"</b><span>select manually</span>";
   setTimeout(()=>{b.innerHTML="<b>Copy curve</b><span>send it to me</span>";},3000);};
@@ -573,13 +604,16 @@ $("zoomRow").addEventListener("click",e=>{
   zLab(); wings(); drawRegs();
   $("seek").value=dur?Math.max(0,Math.min(100000,((pos()-viewStart)/vLen())*100000)):0;
   $("say").textContent=viewLen>0?("Zoom "+viewLen+" seconds"):"Zoom full track";});
-FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI(); engUI(); zLab();
+FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI(); engUI(); glideUI(); zLab();
 setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
 window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
   if(!dragging){ $("cur").textContent=fmt(p);
     if(viewLen>0&&playing&&(p<viewStart||p>viewStart+vLen())){centreOn(p);zLab();}
     $("seek").value=dur?Math.max(0,Math.min(100000,((p-viewStart)/vLen())*100000)):0; }
-  zLab();wings();eqAuto();requestAnimationFrame(frame);}
+  zLab();wings();eqAuto();
+  const gN=ctx.currentTime<glideEnd; if(gN!==_gl){_gl=gN;$("glideBox").classList.toggle("gliding",gN);}
+  requestAnimationFrame(frame);}
+let _gl=false;
 requestAnimationFrame(frame);
 </script>

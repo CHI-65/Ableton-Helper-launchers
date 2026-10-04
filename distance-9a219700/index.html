@@ -1,0 +1,205 @@
+<!doctype html><meta charset="utf-8"><title>Distance — master A/B</title>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ :root{--ground:#eef0f3;--panel:#fff;--edge:#dfe3e8;--row:#f6f7f9;--ink:#1b1e24;--muted:#5d6673;--faint:#8b95a3;
+   --accent:#2f9e8f;--old:#c8791f;--new:#6f57a6;--matched:#2f8f83;--warn:#c8791f;
+   --refdynamic:#4a6fa5;--refloud:#bf4f6e;--reference:#6b7481;
+   --shadow:0 1px 2px rgba(20,24,32,.05),0 14px 34px -14px rgba(20,24,32,.20)}
+ @media(prefers-color-scheme:dark){:root{--ground:#12151a;--panel:#1b1f26;--edge:#2b313b;--row:#232833;--ink:#e7eaee;
+   --muted:#9aa4b2;--faint:#6b7481;--accent:#3cc0ae;--old:#e2a14e;--new:#a488d8;--matched:#3cc0ae;--warn:#e2a14e;
+   --refdynamic:#6b93cf;--refloud:#e0788f;--reference:#8b95a3;
+   --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 44px -18px rgba(0,0,0,.6)}}
+ *{box-sizing:border-box}body{margin:0}
+ .wrap{min-height:100%;background:var(--ground);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+   display:flex;justify-content:center;padding:clamp(14px,3.5vw,44px)}
+ .card{width:100%;max-width:640px;background:var(--panel);border:1px solid var(--edge);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+ .top{padding:20px 22px 16px;border-bottom:1px solid var(--edge)}
+ .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+   display:flex;align-items:center;gap:8px;margin-bottom:10px}
+ .rec{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+ h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em}
+ .lede{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+ .ab{padding:16px 16px 6px;display:flex;flex-direction:column;gap:9px}
+ .vb{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:13px;width:100%;text-align:left;
+   background:var(--row);border:2px solid var(--edge);border-radius:11px;padding:13px 15px;cursor:pointer;
+   font-family:inherit;color:var(--ink);transition:border-color .12s,background .12s}
+ .vb:hover{border-color:var(--faint)}.vb:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+ .vb .dot{width:14px;height:14px;border-radius:50%}
+ .vb[data-k="old"] .dot{background:var(--old)}.vb[data-k="new"] .dot{background:var(--new)}
+ .vb[data-k="matched"] .dot{background:var(--matched)}
+ .vb[data-k="old"].on{border-color:var(--old);background:color-mix(in srgb,var(--old) 12%,transparent)}
+ .vb[data-k="new"].on{border-color:var(--new);background:color-mix(in srgb,var(--new) 12%,transparent)}
+ .vb[data-k="matched"].on{border-color:var(--matched);background:color-mix(in srgb,var(--matched) 12%,transparent)}
+ .vb[data-k="refdynamic"] .dot{background:var(--refdynamic)}
+ .vb[data-k="refdynamic"].on{border-color:var(--refdynamic);background:color-mix(in srgb,var(--refdynamic) 12%,transparent)}
+ .vb[data-k="refloud"] .dot{background:var(--refloud)}
+ .vb[data-k="refloud"].on{border-color:var(--refloud);background:color-mix(in srgb,var(--refloud) 12%,transparent)}
+ .vb[data-k="reference"] .dot{background:var(--reference)}
+ .vb[data-k="reference"].on{border-color:var(--reference);background:color-mix(in srgb,var(--reference) 12%,transparent)}
+ .vn{font-size:16px;font-weight:700;letter-spacing:.02em}
+ .vs{font-size:12px;color:var(--muted);margin-top:2px}
+ .vm{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);text-align:right;line-height:1.6;font-variant-numeric:tabular-nums}
+ .key{display:inline-block;border:1px solid var(--edge);border-radius:4px;padding:0 5px;font-size:10px;
+   font-family:ui-monospace,Menlo,monospace;color:var(--faint);margin-left:7px}
+ .opt{margin:4px 16px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--row);
+   border:1px solid var(--edge);border-radius:11px;padding:11px 15px}
+ .opt .t{font-size:13px;font-weight:600}.opt .d{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.45}
+ .tg{border:2px solid var(--accent);background:transparent;color:var(--accent);border-radius:9px;height:38px;padding:0 16px;
+   font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;white-space:nowrap}
+ .tg.on{background:var(--accent);color:#fff}
+ .tg:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+ .seg{display:flex;border:2px solid var(--edge);border-radius:9px;overflow:hidden;flex:none}
+ .seg button{border:none;background:transparent;color:var(--muted);height:34px;padding:0 13px;font-weight:700;font-size:12.5px;
+   cursor:pointer;font-family:inherit}
+ .seg button.on{background:var(--accent);color:#fff}
+ .seg button:disabled{opacity:.4;cursor:default}
+ .seg button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+ .transport{margin-top:14px;padding:14px 20px;border-top:1px solid var(--edge);display:grid;
+   grid-template-columns:auto auto 1fr auto;align-items:center;gap:13px}
+ .play{width:50px;height:50px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;
+   cursor:pointer;font-family:inherit}
+ .play:disabled{opacity:.45;cursor:default}.play:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+ .time{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:52px}
+ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:26px}
+ .marks{padding:12px 16px 4px;border-top:1px solid var(--edge)}
+ .mt{font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:9px}
+ .mg{display:flex;flex-wrap:wrap;gap:7px}
+ .mb{border:1px solid var(--edge);background:transparent;color:var(--muted);border-radius:8px;padding:7px 11px;font-size:12px;
+   cursor:pointer;font-family:inherit;text-align:left}
+ .mb:hover{border-color:var(--accent);color:var(--accent)}.mb:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+ .mb b{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink);font-weight:700}
+ .mb span{display:block;font-size:10.5px;color:var(--faint);margin-top:1px}
+ .hint{padding:14px 20px 18px;font-size:12px;color:var(--faint);line-height:1.6;margin:0;border-top:1px solid var(--edge)}
+ .loading{padding:0 20px 16px;font-size:12.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
+ .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+<div class="wrap"><main class="card">
+ <div class="top"><div class="eyebrow"><span class="rec"></span>Master A/B · sample-synced</div>
+  <h1>Distance — three masters</h1>
+  <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
+   difference and not the gap. Level match is on by default — leave it on to judge the master, turn it
+   off to hear the real loudness difference. <b>REFERENCE</b> is the Culbertson track — 63 s on its
+   own loop, there to check tone, not timing.</p></div>
+ <div class="ab" id="ab"></div>
+ <div class="opt"><div><div class="t">Level match</div>
+   <div class="d" id="lvld">All three matched to −16.6 LUFS. Fair comparison.</div></div>
+   <button class="tg on" id="lvlBtn" aria-pressed="true">ON<span class="key">L</span></button></div>
+ <div class="opt"><div><div class="t">Source quality</div>
+   <div class="d" id="srcd">AAC 128k, embedded in this page.</div></div>
+   <div class="seg" role="group" aria-label="Source quality">
+     <button id="sAac" class="on">AAC</button><button id="sWav" disabled>WAV</button></div></div>
+ <p class="loading" id="loading">decoding three masters…</p>
+ <div class="transport">
+  <button class="play" id="play" disabled>Play</button>
+  <span class="time" id="cur">0:00</span>
+  <input type="range" id="seek" min="0" max="100000" value="0" step="1" aria-label="Seek">
+  <span class="time" id="dur">0:00</span></div>
+ <div class="marks"><div class="mt">Jump to</div><div class="mg" id="marks"></div></div>
+ <p class="hint"><b>Keys:</b> <span class="key">space</span> play/pause &nbsp;
+  <span class="key">1</span>–<span class="key">6</span> switch version &nbsp;
+  <span class="key">L</span> level match &nbsp; <span class="key">W</span> AAC/WAV &nbsp;
+  <span class="key">←</span><span class="key">→</span> ±5 s<br>
+  WAV needs <b>serve.command</b> running in this folder.</p>
+ <div class="sr" aria-live="polite" id="say"></div>
+</main></div>
+<script>
+const TRACKS=[{"key": "old", "name": "OLD", "sub": "Distance Mix Final edit", "lufs": -12.3, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "NEW", "sub": "edit. 2 \u2014 piano down", "lufs": -17.2, "tp": "+0.07", "crest": "18.68", "loose": false, "b64": null}, {"key": "matched", "name": "MATCHED", "sub": "edit. 2 + DC fix + drive", "lufs": -12.7, "tp": "-1.00", "crest": "13.32", "loose": false, "b64": null}, {"key": "refdynamic", "name": "REF-MATCH", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.9, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "refloud", "name": "REF-MATCH LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.7, "tp": "-1.00", "crest": "13.17", "loose": false, "b64": null}], MARKS=[], TARGET=-16.6;
+// served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
+const _http=location.protocol.indexOf("http")===0;
+const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab60/":"http://127.0.0.1:8777/ab/";
+const $=id=>document.getElementById(id);
+const AC=window.AudioContext||window.webkitAudioContext;
+const ctx=new AC();
+let _unlocked=false,_silentEl=null;
+function unlockAudio(){ if(_unlocked)return; _unlocked=true;
+  if(!_silentEl){_silentEl=document.createElement("audio");_silentEl.setAttribute("playsinline","");_silentEl.loop=true;
+    _silentEl.src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAA=";
+    document.body.appendChild(_silentEl);}
+  _silentEl.play().catch(()=>{});
+  try{const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);}catch(e){}
+  if(ctx.state==="suspended")ctx.resume();}
+["touchend","touchstart","pointerdown","mousedown","keydown"].forEach(e=>document.addEventListener(e,unlockAudio,{passive:true}));
+function b64buf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
+function fmt(s){s=Math.max(0,s);return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");}
+
+const G={},BUF={aac:{},wav:{}};
+let active="old",levelMatch=true,srcMode="aac",wavReady=false,wavBusy=false,wavUp=false;
+let sources=null,playing=false,offset=0,t0=0,dur=0,dragging=false;
+const B=k=>BUF[srcMode][k];
+TRACKS.forEach(t=>{const g=ctx.createGain();g.gain.value=0;g.connect(ctx.destination);G[t.key]=g;});
+function gainFor(t){return levelMatch?Math.pow(10,(TARGET-t.lufs)/20):1;}
+function applyGains(){const n=ctx.currentTime;
+  TRACKS.forEach(t=>G[t.key].gain.setTargetAtTime(t.key===active?gainFor(t):0,n,.008));}
+
+$("ab").innerHTML=TRACKS.map((t,i)=>`<button class="vb${t.key===active?" on":""}" data-k="${t.key}" aria-pressed="${t.key===active}">
+  <span class="dot"></span><span><span class="vn">${t.name}<span class="key">${i+1}</span></span><span class="vs">${t.sub}</span></span>
+  <span class="vm">${t.lufs.toFixed(1)} LUFS<br>${t.tp} dBTP<br>${t.crest} crest</span></button>`).join("");
+$("marks").innerHTML=MARKS.map(m=>`<button class="mb" data-t="${m[0]}"><b>${m[1]}</b><span>${m[2]}</span></button>`).join("");
+
+function setActive(k){active=k;
+  document.querySelectorAll(".vb").forEach(b=>{const on=b.dataset.k===k;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);});
+  applyGains();const t=TRACKS.find(x=>x.key===k);$("say").textContent=t.name+" — "+t.sub;}
+document.querySelectorAll(".vb").forEach(b=>b.onclick=()=>setActive(b.dataset.k));
+$("lvlBtn").onclick=()=>{levelMatch=!levelMatch;const b=$("lvlBtn");
+  b.classList.toggle("on",levelMatch);b.textContent=levelMatch?"ON":"OFF";b.setAttribute("aria-pressed",levelMatch);
+  b.insertAdjacentHTML("beforeend",'<span class="key">L</span>');
+  $("lvld").textContent=levelMatch?"All three matched to −16.6 LUFS. Fair comparison."
+                                  :"Native levels. OLD and MATCHED are 4.5 dB louder.";
+  applyGains();$("say").textContent="Level match "+(levelMatch?"on":"off");};
+
+function srcUI(note){$("sAac").classList.toggle("on",srcMode==="aac");$("sWav").classList.toggle("on",srcMode==="wav");
+  $("sWav").disabled=!wavUp||wavBusy;
+  if(note!==undefined){$("srcd").textContent=note;return;}
+  $("srcd").textContent = srcMode==="wav" ? "Lossless WAV, streamed from this folder."
+    : (wavUp?"AAC 128k, embedded. WAV available.":"AAC 128k, embedded. Start serve.command for WAV.");}
+async function loadWav(){ if(wavReady||wavBusy)return; wavBusy=true;srcUI("loading lossless…");
+  try{ for(const t of TRACKS){ srcUI("loading "+t.name+" …");
+      const r=await fetch(WAVBASE+t.key+".wav"); if(!r.ok)throw new Error("HTTP "+r.status);
+      BUF.wav[t.key]=await ctx.decodeAudioData(await r.arrayBuffer()); }
+    wavReady=true; }
+  catch(e){ wavBusy=false; wavUp=false; srcUI("WAV failed ("+e.message+") — is serve.command running?"); return; }
+  wavBusy=false; }
+async function setSrc(mode){ if(mode===srcMode||wavBusy)return;
+  if(mode==="wav"){ await loadWav(); if(!wavReady)return; }
+  const was=playing,p=pos(); pauseAll(); srcMode=mode; offset=p; srcUI();
+  $("say").textContent="Source "+(mode==="wav"?"lossless WAV":"AAC 128k");
+  if(was)startAll(offset); }
+$("sAac").onclick=()=>setSrc("aac"); $("sWav").onclick=()=>setSrc("wav");
+
+function pos(){return playing?Math.min(dur,offset+Math.max(0,ctx.currentTime-t0)):offset;}
+function startAll(at){t0=ctx.currentTime+.06;
+  sources=TRACKS.map(t=>{const b=B(t.key);if(!b)return null;
+    const s=ctx.createBufferSource();s.buffer=b;s.connect(G[t.key]);
+    if(t.loose){s.loop=true;s.start(t0,at%b.duration);}else{s.start(t0,Math.min(at,b.duration));}return s;}).filter(Boolean);
+  offset=at;playing=true;$("play").textContent="Pause";applyGains();}
+function pauseAll(){if(!playing)return;offset=pos();
+  if(sources)sources.forEach(s=>{try{s.stop()}catch(e){}});sources=null;playing=false;$("play").textContent="Play";}
+async function ensure(){if(ctx.state==="suspended")await ctx.resume();}
+$("play").onclick=async()=>{unlockAudio();await ensure();playing?pauseAll():startAll(offset>=dur?0:offset);};
+function seekTo(s){const was=playing;pauseAll();offset=Math.max(0,Math.min(dur,s));
+  $("cur").textContent=fmt(offset);$("seek").value=dur?offset/dur*100000:0;if(was)startAll(offset);}
+$("seek").oninput=e=>{dragging=true;$("cur").textContent=fmt(e.target.value/100000*dur);};
+$("seek").onchange=e=>{dragging=false;seekTo(e.target.value/100000*dur);};
+document.querySelectorAll(".mb").forEach(b=>b.onclick=async()=>{unlockAudio();await ensure();
+  const was=playing;seekTo(parseFloat(b.dataset.t));if(!was)startAll(offset);});
+document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return;
+  if(e.code==="Space"){e.preventDefault();$("play").click();}
+  else if(e.key>="1"&&e.key<="6"){const t=TRACKS[+e.key-1];if(t)setActive(t.key);}
+  else if(e.key==="l"||e.key==="L"){$("lvlBtn").click();}
+  else if(e.key==="w"||e.key==="W"){setSrc(srcMode==="aac"?"wav":"aac");}
+  else if(e.key==="ArrowLeft"){e.preventDefault();seekTo(pos()-5);}
+  else if(e.key==="ArrowRight"){e.preventDefault();seekTo(pos()+5);}});
+
+fetch(WAVBASE+"old.wav",{method:"HEAD"}).then(r=>{if(r.ok){wavUp=true;srcUI();}}).catch(()=>{});
+Promise.all(TRACKS.map(t=>(t.b64?Promise.resolve(b64buf(t.b64))
+   :fetch(AACBASE+t.key+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
+   .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF.aac[t.key]=b;})))
+ .then(()=>{dur=Math.max(...TRACKS.filter(t=>!t.loose).map(t=>BUF.aac[t.key].duration));
+   $("dur").textContent=fmt(dur);$("play").disabled=false;$("loading").remove();
+   TRACKS.forEach(t=>t.b64=null);applyGains();srcUI();})
+ .catch(e=>{$("loading").textContent="decode failed: "+e;});
+function frame(){const p=pos();if(playing&&p>=dur){pauseAll();offset=0;}
+  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+</script>

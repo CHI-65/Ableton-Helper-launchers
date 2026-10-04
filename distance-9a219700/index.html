@@ -79,7 +79,7 @@
   <h1>Distance — three masters</h1>
   <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
    difference and not the gap. Level match is on by default — leave it on to judge the master, turn it
-   off to hear the real loudness difference. <b>REFERENCE</b> is the Culbertson track — 63 s on its
+   off to hear the real loudness difference. <b>edit (+.5)</b> is your new bounce. <b>REFERENCE</b> is the Culbertson track — 63 s on its
    own loop, there to check tone, not timing.</p></div>
  <div class="ab" id="ab"></div>
  <div class="opt"><div><div class="t">Level match</div>
@@ -113,9 +113,9 @@
  <div class="sr" aria-live="polite" id="say"></div>
 </main></div>
 <script>
-const TRACKS=[{"key": "old", "name": "OLD", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "NEW", "sub": "edit. 2 \u2014 piano down", "lufs": -16.6, "tp": "+0.07", "crest": "18.68", "loose": false, "b64": null}, {"key": "matched", "name": "MATCHED", "sub": "edit. 2 + DC fix + drive", "lufs": -12.1, "tp": "-1.00", "crest": "13.32", "loose": false, "b64": null}, {"key": "refdynamic", "name": "REF-MATCH", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "refloud", "name": "REF-MATCH LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.17", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
+const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -16.6, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -16.4, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791104801241;
+const EXPIRES=1791107835872;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);

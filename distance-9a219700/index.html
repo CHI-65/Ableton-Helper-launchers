@@ -1,5 +1,7 @@
-<!doctype html><meta charset="utf-8"><title>Distance — master A/B</title>
+<!doctype html><meta charset="utf-8"><title>MasterMind v2.0 — Distance</title>
 <meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
  :root{--ground:#eef0f3;--panel:#fff;--edge:#dfe3e8;--row:#f6f7f9;--ink:#1b1e24;--muted:#5d6673;--faint:#8b95a3;
@@ -19,6 +21,14 @@
    display:flex;align-items:center;gap:8px;margin-bottom:10px}
  .rec{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
  h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em}
+ .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+ .brand .nm{font-size:25px;font-weight:800;letter-spacing:-.02em}
+ .ver{font-family:ui-monospace,Menlo,monospace;font-size:13px;font-weight:700;color:#fff;background:var(--accent);
+   border-radius:7px;padding:3px 9px}
+ .stale{display:none;align-items:center;gap:10px;background:var(--warn);color:#fff;padding:10px 16px;font-size:13px;font-weight:650}
+ .stale.on{display:flex}
+ .stale button{border:1px solid #fff;background:rgba(255,255,255,.18);color:#fff;border-radius:7px;
+   padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
  .lede{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
  .ab{padding:16px 16px 6px;display:flex;flex-direction:column;gap:9px}
  .vb{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:13px;width:100%;text-align:left;
@@ -145,8 +155,11 @@
  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 <div class="wrap"><main class="card">
- <div class="top"><div class="eyebrow"><span class="rec"></span>Master A/B · sample-synced</div>
-  <h1>Distance — three masters</h1>
+ <div class="stale" id="stale"><span>A newer version is out — you are seeing a cached page.</span>
+   <button id="reloadBtn">Reload</button></div>
+ <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.0</span></div>
+  <div class="eyebrow" style="margin:9px 0 8px"><span class="rec"></span>Master A/B · sample-synced</div>
+  <h1>Distance — six masters</h1>
   <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
    difference and not the gap. Level match is on by default — leave it on to judge the master, turn it
    off to hear the real loudness difference. <b>edit (+.5)</b> is your new bounce. <b>REFERENCE</b> is the Culbertson track — 63 s on its
@@ -212,10 +225,19 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -16.6, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -16.4, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791130499196;
+const EXPIRES=1791130837694;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
+const VERSION="2.0";
+async function checkVer(){ try{
+    const r=await fetch("version.txt?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)return; const v=(await r.text()).trim();
+    if(v&&v!==VERSION)$("stale").classList.add("on");
+  }catch(e){} }
+document.addEventListener("DOMContentLoaded",()=>{
+  const b=$("reloadBtn"); if(b)b.onclick=()=>location.replace(location.pathname+"?v="+Date.now());
+  checkVer(); setInterval(checkVer,60000);});
 const AC=window.AudioContext||window.webkitAudioContext;
 const ctx=new AC();
 let _unlocked=false,_silentEl=null;

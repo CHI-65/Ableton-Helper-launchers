@@ -1,0 +1,146 @@
+<!doctype html><meta charset="utf-8"><title>Distance — piano balance</title>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ :root{--ground:#eef0f3;--panel:#fff;--edge:#dfe3e8;--row:#f6f7f9;--ink:#1b1e24;--muted:#5d6673;--faint:#8b95a3;
+   --accent:#2f9e8f;--piano:#6f57a6;--shadow:0 1px 2px rgba(20,24,32,.05),0 14px 34px -14px rgba(20,24,32,.20)}
+ @media(prefers-color-scheme:dark){:root{--ground:#12151a;--panel:#1b1f26;--edge:#2b313b;--row:#232833;--ink:#e7eaee;
+   --muted:#9aa4b2;--faint:#6b7481;--accent:#3cc0ae;--piano:#a488d8;--shadow:0 1px 2px rgba(0,0,0,.3),0 18px 44px -18px rgba(0,0,0,.6)}}
+ *{box-sizing:border-box}body{margin:0}
+ .wrap{min-height:100%;background:var(--ground);color:var(--ink);font-family:system-ui,-apple-system,sans-serif;
+   display:flex;justify-content:center;padding:clamp(14px,3.5vw,44px)}
+ .card{width:100%;max-width:620px;background:var(--panel);border:1px solid var(--edge);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+ .top{padding:20px 22px 16px;border-bottom:1px solid var(--edge)}
+ .eyebrow{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+   display:flex;align-items:center;gap:8px;margin-bottom:10px}
+ .rec{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+ h1{margin:0;font-size:19px;font-weight:650}
+ .lede{margin:8px 0 0;font-size:13px;color:var(--muted);line-height:1.5}
+ .big{padding:22px;text-align:center;border-bottom:1px solid var(--edge)}
+ .val{font-size:52px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;color:var(--piano);line-height:1}
+ .val .u{font-size:19px;color:var(--muted);margin-left:5px}
+ .sub{font-size:12.5px;color:var(--muted);margin-top:7px}
+ input[type=range]{width:100%;accent-color:var(--piano);cursor:pointer;height:34px;margin-top:14px}
+ .pre{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--edge)}
+ .pb{border:1px solid var(--edge);background:transparent;color:var(--muted);border-radius:9px;padding:9px 14px;font-size:12.5px;
+   cursor:pointer;font-family:inherit;text-align:center}
+ .pb:hover{border-color:var(--piano);color:var(--piano)} .pb.on{border-color:var(--piano);color:#fff;background:var(--piano)}
+ .pb b{display:block;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+ .pb span{display:block;font-size:10.5px;color:var(--faint);margin-top:2px} .pb.on span{color:rgba(255,255,255,.75)}
+ .transport{padding:14px 20px;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:13px;border-bottom:1px solid var(--edge)}
+ .play{width:50px;height:50px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+ .play:disabled{opacity:.45}
+ .time{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:52px}
+ .seekw input{height:26px}
+ .row{padding:13px 18px;display:flex;gap:9px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--edge)}
+ .btn{border:1px solid var(--edge);background:transparent;color:var(--muted);border-radius:8px;padding:8px 13px;font-size:12.5px;cursor:pointer;font-family:inherit}
+ .btn:hover{border-color:var(--accent);color:var(--accent)} .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+ .win{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+ .copyb{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:9px;padding:11px 16px;
+   font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;width:100%}
+ .copyb.done{background:var(--accent);color:#fff}
+ .hint{padding:14px 20px 18px;font-size:12px;color:var(--faint);line-height:1.6;margin:0}
+ .loading{padding:0 20px 16px;font-size:12.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
+ .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+ .key{display:inline-block;border:1px solid var(--edge);border-radius:4px;padding:0 5px;font-size:10px;font-family:ui-monospace,Menlo,monospace;color:var(--faint);margin-left:6px}
+</style>
+<div class="wrap"><main class="card">
+ <div class="top"><div class="eyebrow"><span class="rec"></span>Piano balance · live</div>
+  <h1>Distance — set the piano by ear</h1>
+  <p class="lede">Real MVSEP stems that reconstruct your original master to −69 dB. Move the fader while
+   it plays and the piano changes instantly. When it sounds right, copy the number and send it to me —
+   I'll build the master at exactly that value.</p></div>
+ <div class="big"><div class="val"><span id="val">-7.5</span><span class="u">dB</span></div>
+  <div class="sub">piano, relative to your original master</div>
+  <input type="range" id="fader" min="-240" max="60" step="1" value="-75" aria-label="Piano level in dB">
+ </div>
+ <div class="pre" id="pre"></div>
+ <p class="loading" id="loading">decoding stems…</p>
+ <div class="transport"><button class="play" id="play" disabled>Play</button>
+  <span class="time" id="cur">0:00</span>
+  <span class="seekw" style="width:100%"><input type="range" id="seek" min="0" max="100000" value="0" aria-label="Seek"></span>
+  <span class="time" id="dur">0:00</span></div>
+ <div class="row"><button class="btn" id="setA">Set A<span class="key">A</span></button>
+  <button class="btn" id="setB">Set B<span class="key">B</span></button>
+  <button class="btn" id="loopBtn">Loop<span class="key">O</span></button>
+  <button class="btn" id="clrAB">Clear</button><span class="win" id="winTxt">whole track</span></div>
+ <div class="row"><button class="copyb" id="copyB">Copy this setting for chat</button></div>
+ <p class="hint"><b>Keys:</b> <span class="key">space</span> play ·
+  <span class="key">↑</span><span class="key">↓</span> piano ±0.1 dB ·
+  <span class="key">A</span><span class="key">B</span><span class="key">O</span> loop · <span class="key">←</span><span class="key">→</span> ±5 s<br>
+  Piano and other are summed live, so this is exactly what a bounce at that setting would sound like.</p>
+ <div class="sr" aria-live="polite" id="say"></div></main></div>
+<script>
+const ST={"other": null, "piano": null}, PRESETS=[[0.0, "OLD", "piano untouched"], [-8.0, "edit. 2", "what you had"], [-7.5, "target", "edit. 2 + 0.5"]];
+const _http=location.protocol.indexOf("http")===0;
+const BASE=_http?"stems/":"http://127.0.0.1:8777/stems/";
+const $=id=>document.getElementById(id);
+const AC=window.AudioContext||window.webkitAudioContext; const ctx=new AC();
+let _u=false,_s=null;
+function unlock(){if(_u)return;_u=true;
+  if(!_s){_s=document.createElement("audio");_s.setAttribute("playsinline","");_s.loop=true;
+   _s.src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAA=";document.body.appendChild(_s);}
+  _s.play().catch(()=>{});
+  try{const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);}catch(e){}
+  if(ctx.state==="suspended")ctx.resume();}
+["touchend","pointerdown","keydown"].forEach(e=>document.addEventListener(e,unlock,{passive:true}));
+function b64buf(b){const s=atob(b),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u.buffer;}
+function fmt(s){s=Math.max(0,s);return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,"0");}
+const BUF={},G={};
+let srcs=null,playing=false,offset=0,t0=0,dur=0,drag=false,gainDb=-7.5,mA=null,mB=null,loopOn=false;
+const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
+["other","piano"].forEach(k=>{const g=ctx.createGain();g.gain.value=1;g.connect(ctx.destination);G[k]=g;});
+function applyPiano(){G.piano.gain.setTargetAtTime(Math.pow(10,gainDb/20),ctx.currentTime,.01);}
+function setDb(v,tag){gainDb=Math.max(-24,Math.min(6,v));
+  $("val").textContent=(gainDb>0?"+":"")+gainDb.toFixed(1);
+  $("fader").value=Math.round(gainDb*10); applyPiano();
+  document.querySelectorAll(".pb").forEach(b=>b.classList.toggle("on",Math.abs(parseFloat(b.dataset.v)-gainDb)<0.05));
+  if(tag)$("say").textContent="Piano "+gainDb.toFixed(1)+" dB";}
+$("fader").oninput=e=>setDb(parseInt(e.target.value)/10,1);
+$("pre").innerHTML=PRESETS.map(p=>`<button class="pb" data-v="${p[0]}"><b>${p[0]>0?"+":""}${p[0].toFixed(1)} dB</b><span>${p[1]} — ${p[2]}</span></button>`).join("");
+document.querySelectorAll(".pb").forEach(b=>b.onclick=()=>setDb(parseFloat(b.dataset.v),1));
+function pos(){if(!playing)return offset;const el=Math.max(0,ctx.currentTime-t0);
+  if(loopOn){const a=winA(),z=winB(),L=z-a;if(L<=0)return offset;return a+(((offset-a)%L+L)%L+el)%L;}
+  return Math.min(dur,offset+el);}
+function startAll(at){t0=ctx.currentTime+.06;
+  srcs=["other","piano"].map(k=>{const s=ctx.createBufferSource();s.buffer=BUF[k];s.connect(G[k]);
+    if(loopOn){const a=winA(),z=Math.min(winB(),BUF[k].duration);s.loop=true;s.loopStart=a;s.loopEnd=z;s.start(t0,Math.min(Math.max(at,a),z));}
+    else s.start(t0,Math.min(at,BUF[k].duration));return s;});
+  offset=at;playing=true;$("play").textContent="Pause";applyPiano();}
+function pauseAll(){if(!playing)return;offset=pos();if(srcs)srcs.forEach(s=>{try{s.stop()}catch(e){}});srcs=null;playing=false;$("play").textContent="Play";}
+$("play").onclick=async()=>{unlock();if(ctx.state==="suspended")await ctx.resume();playing?pauseAll():startAll(offset>=dur?0:offset);};
+function seekTo(s){const w=playing;pauseAll();offset=Math.max(0,Math.min(dur,s));
+  $("cur").textContent=fmt(offset);$("seek").value=dur?offset/dur*100000:0;if(w)startAll(offset);}
+$("seek").oninput=e=>{drag=true;$("cur").textContent=fmt(e.target.value/100000*dur);};
+$("seek").onchange=e=>{drag=false;seekTo(e.target.value/100000*dur);};
+function winTxt(){$("winTxt").textContent=(mA==null&&mB==null)?(loopOn?"whole track (looping)":"whole track")
+  :fmt(winA())+" – "+fmt(winB())+(loopOn?"  ↻":"");}
+function reArm(){const w=playing,p=pos();pauseAll();offset=p;if(w)startAll(offset);winTxt();}
+$("setA").onclick=()=>{mA=pos();if(mB!=null&&mB<=mA)mB=null;reArm();};
+$("setB").onclick=()=>{const p=pos();if(p>winA()){mB=p;reArm();}};
+$("clrAB").onclick=()=>{mA=mB=null;reArm();};
+$("loopBtn").onclick=()=>{loopOn=!loopOn;$("loopBtn").classList.toggle("on",loopOn);reArm();};
+$("copyB").onclick=async()=>{const t="Piano at "+(gainDb>0?"+":"")+gainDb.toFixed(1)+" dB relative to the original master"
+  +((mA!=null||mB!=null)?" (judged over "+fmt(winA())+"–"+fmt(winB())+")":"");
+  let ok=false; try{await navigator.clipboard.writeText(t);ok=true;}catch(e){}
+  const b=$("copyB");b.textContent=ok?"Copied — paste it in chat":t;b.classList.toggle("done",ok);
+  setTimeout(()=>{b.textContent="Copy this setting for chat";b.classList.remove("done");},3000);};
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT"&&e.key!=="ArrowUp"&&e.key!=="ArrowDown")return;
+  if(e.code==="Space"){e.preventDefault();$("play").click();}
+  else if(e.key==="ArrowUp"){e.preventDefault();setDb(gainDb+0.1,1);}
+  else if(e.key==="ArrowDown"){e.preventDefault();setDb(gainDb-0.1,1);}
+  else if(e.key==="ArrowLeft"){e.preventDefault();seekTo(pos()-5);}
+  else if(e.key==="ArrowRight"){e.preventDefault();seekTo(pos()+5);}
+  else if(e.key==="a"||e.key==="A"){$("setA").click();}
+  else if(e.key==="b"||e.key==="B"){$("setB").click();}
+  else if(e.key==="o"||e.key==="O"){$("loopBtn").click();}});
+Promise.all(["other","piano"].map(k=>(ST[k]?Promise.resolve(b64buf(ST[k]))
+  :fetch(BASE+k+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
+  .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF[k]=b;})))
+ .then(()=>{dur=Math.min(BUF.other.duration,BUF.piano.duration);$("dur").textContent=fmt(dur);
+   $("play").disabled=false;$("loading").remove();setDb(-7.5);winTxt();})
+ .catch(e=>{$("loading").textContent="load failed: "+e.message;});
+function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
+  if(!drag){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+</script>

@@ -79,6 +79,19 @@
  .band .f{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint);height:14px;margin-top:3px}
  .band.act .v{color:var(--accent);font-weight:700}
  .zero{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--edge);pointer-events:none}
+ .regs{margin-top:12px;border-top:1px solid var(--edge);padding-top:11px}
+ .reglist{display:flex;flex-direction:column;gap:6px;margin-top:9px}
+ .reg{display:grid;grid-template-columns:auto 1fr auto auto auto;gap:9px;align-items:center;background:var(--row);
+   border:1px solid var(--edge);border-radius:9px;padding:8px 11px}
+ .reg.live{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+ .reg .rg{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+ .reg .cnt{font-size:11px;color:var(--muted)}
+ .reg button{border:1px solid var(--edge);background:transparent;color:var(--muted);border-radius:6px;
+   padding:5px 9px;font-size:11.5px;cursor:pointer;font-family:inherit}
+ .reg button:hover{border-color:var(--accent);color:var(--accent)}
+ .reg .del{color:var(--danger,#c0504d);border-color:transparent;font-size:15px;padding:2px 8px}
+ .reg input[type=checkbox]{width:19px;height:19px;accent-color:var(--accent)}
+ .mkr{position:absolute;top:30px;bottom:30px;background:var(--accent);opacity:.18;z-index:0;pointer-events:none}
  .mk{position:absolute;width:2px;top:30px;bottom:30px;background:var(--accent);opacity:.55;z-index:0;display:none}
  .mk.on{display:block}
  .lbadge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--edge);border-radius:8px;
@@ -144,6 +157,11 @@
      <button class="mb" id="eqCopy"><b>Copy curve</b><span>send it to me</span></button>
      <span class="win" id="eqInfo">30 bands · ⅓ octave · ±12 dB</span></div>
    <div class="eqscroll"><div class="eqbands" id="eqBands"></div></div>
+   <div class="regs"><div class="eqtop" style="margin:0 0 4px">
+     <button class="tg" id="autoBtn" aria-pressed="false" style="height:32px">Automation OFF</button>
+     <button class="mb" id="regAdd"><b>Add region</b><span>uses A–B</span></button>
+     <span class="win" id="autoInfo">EQ applies to the whole track</span></div>
+     <div class="reglist" id="regList"></div></div>
  </div>
  <p class="hint"><b>Keys:</b> <span class="key">space</span> play/pause &nbsp;
   <span class="key">1</span>–<span class="key">6</span> switch version &nbsp;
@@ -156,7 +174,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -16.6, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -16.4, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791127113935;
+const EXPIRES=1791127295561;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -337,11 +355,56 @@ $("eqBands").innerHTML=FREQS.map((f,i)=>{
    <span class="slot"><span class="zero"></span>
    <input type="range" min="-120" max="120" step="1" value="0" data-i="${i}"
      aria-label="${lbl} hertz"></span><span class="f">${lbl}</span></div>`;}).join("");
+let REG=[], autoOn=false, curReg=-2;
+function curveNow(){return EQG.slice();}
+function applyCurve(g,ramp){const n=ctx.currentTime;
+  EQ.forEach((b,i)=>{try{b.gain.cancelScheduledValues(n);}catch(e){}b.gain.setTargetAtTime(g[i],n,ramp);});}
+function regAt(t){for(let i=0;i<REG.length;i++){const r=REG[i];if(r.on&&t>=r.a&&t<r.b)return i;}return -1;}
+function eqAuto(){
+  if(!autoOn){ if(curReg!==-2){curReg=-2;applyCurve(EQG,.01);} return; }
+  const i=regAt(pos());
+  if(i!==curReg){ curReg=i;
+    applyCurve(i<0?new Array(30).fill(0):REG[i].g,.04);   // 40 ms glide, no click at the seam
+    $("autoInfo").textContent=i<0?"outside every region — EQ flat":("in region "+(i+1)+"  "+fmt(REG[i].a)+"–"+fmt(REG[i].b));
+    drawRegs(); }}
+function drawRegs(){
+  $("regList").innerHTML=REG.length?REG.map((r,i)=>{
+    const n=r.g.filter(v=>Math.abs(v)>=0.05).length;
+    return `<div class="reg${i===curReg&&autoOn?" live":""}" data-i="${i}">
+      <input type="checkbox" ${r.on?"checked":""} data-a="on" aria-label="Enable region ${i+1}">
+      <span><span class="rg">${fmt(r.a)} – ${fmt(r.b)}</span> <span class="cnt">· ${n} band${n==1?"":"s"}</span></span>
+      <button data-a="load">Load</button><button data-a="upd">Update</button>
+      <button class="del" data-a="del" aria-label="Delete region ${i+1}">×</button></div>`;}).join("")
+    : '<span class="win">No regions yet. Set A and B on the slider, dial a curve, then Add region.</span>';
+  const sw=$("seek").getBoundingClientRect().width||1;
+  document.querySelectorAll(".mkr").forEach(e=>e.remove());
+  if(autoOn)REG.filter(r=>r.on).forEach(r=>{const d=document.createElement("span");d.className="mkr";
+    d.style.left=((r.a/(dur||1))*sw)+"px";d.style.width=(((r.b-r.a)/(dur||1))*sw)+"px";
+    $("seek").parentElement.appendChild(d);});}
+$("regAdd").onclick=()=>{ if(mA==null&&mB==null){$("say").textContent="Set A and B first";return;}
+  REG.push({a:winA(),b:winB(),g:curveNow(),on:true}); REG.sort((x,y)=>x.a-y.a);
+  curReg=-2; drawRegs(); $("say").textContent="Region added";};
+$("autoBtn").onclick=()=>{autoOn=!autoOn;const b=$("autoBtn");
+  b.classList.toggle("on",autoOn);b.textContent=autoOn?"Automation ON":"Automation OFF";
+  b.setAttribute("aria-pressed",autoOn);curReg=-2;
+  if(!autoOn)$("autoInfo").textContent="EQ applies to the whole track";
+  drawRegs();eqAuto();};
+$("regList").addEventListener("click",e=>{
+  const row=e.target.closest(".reg"); if(!row)return; const i=+row.dataset.i, a=e.target.dataset.a;
+  if(a==="del"){REG.splice(i,1);curReg=-2;drawRegs();}
+  else if(a==="load"){REG[i].g.forEach((v,k)=>{EQG[k]=v;
+     const el=$("eqBands").querySelector('input[data-i="'+k+'"]'); if(el)el.value=Math.round(v*10); eqRead(k);});
+     if(!autoOn)applyCurve(EQG,.02); $("say").textContent="Region "+(i+1)+" loaded into the faders";}
+  else if(a==="upd"){REG[i].g=curveNow();curReg=-2;drawRegs();$("say").textContent="Region "+(i+1)+" updated";}});
+$("regList").addEventListener("change",e=>{
+  const row=e.target.closest(".reg"); if(!row||e.target.dataset.a!=="on")return;
+  REG[+row.dataset.i].on=e.target.checked; curReg=-2; drawRegs();});
 function eqRead(i){const v=EQG[i];const e=$("ev"+i);
   e.textContent=(v>0?"+":"")+v.toFixed(1);
   e.parentElement.classList.toggle("act",Math.abs(v)>=0.05);}
 $("eqBands").addEventListener("input",e=>{ const i=+e.target.dataset.i; if(isNaN(i))return;
   const v=(+e.target.value)/10; EQG[i]=v;
+  if(autoOn&&curReg>=0){REG[curReg].g[i]=v;drawRegs();}   // editing the region you are hearing
   EQ[i].gain.cancelScheduledValues(ctx.currentTime);
   EQ[i].gain.setTargetAtTime(v,ctx.currentTime,.01); eqRead(i);});
 $("eqBtn").onclick=()=>{const o=$("eqPanel").classList.toggle("open");
@@ -356,14 +419,17 @@ $("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{EQG[i]=0;
   $("say").textContent="EQ flat";};
 $("eqCopy").onclick=async()=>{
   const nz=EQG.map((v,i)=>[FREQS[i],Math.round(v*10)/10]).filter(x=>Math.abs(x[1])>=0.05);
-  const txt=nz.length?("EQ curve (1/3 oct): "+nz.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", ")):"EQ is flat";
+  let txt=nz.length?("EQ curve (1/3 oct): "+nz.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", ")):"EQ is flat";
+  if(REG.length)txt+="\nAutomation "+(autoOn?"ON":"OFF")+" — "+REG.map((r,i)=>{
+    const b=r.g.map((v,k)=>[FREQS[k],Math.round(v*10)/10]).filter(x=>Math.abs(x[1])>=0.05);
+    return "["+fmt(r.a)+"-"+fmt(r.b)+(r.on?"":" (off)")+": "+(b.length?b.map(x=>x[0]+"Hz "+(x[1]>0?"+":"")+x[1].toFixed(1)).join(", "):"flat")+"]";}).join(" ");
   let ok=false; try{await navigator.clipboard.writeText(txt);ok=true;}catch(e){}
   const b=$("eqCopy"); b.innerHTML=ok?"<b>Copied</b><span>paste in chat</span>":"<b>"+txt.slice(0,40)+"</b><span>select manually</span>";
   setTimeout(()=>{b.innerHTML="<b>Copy curve</b><span>send it to me</span>";},3000);};
-FREQS.forEach((f,i)=>eqRead(i));
+FREQS.forEach((f,i)=>eqRead(i)); drawRegs();
 setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
 window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
-  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}wings();requestAnimationFrame(frame);}
+  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}wings();eqAuto();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>

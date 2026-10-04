@@ -55,8 +55,24 @@
  .seg button.on{background:var(--accent);color:#fff}
  .seg button:disabled{opacity:.4;cursor:default}
  .seg button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
- .transport{margin-top:14px;padding:14px 20px;border-top:1px solid var(--edge);display:grid;
+ .transport{margin-top:14px;padding:10px 20px 6px;border-top:1px solid var(--edge);display:grid;
    grid-template-columns:auto auto 1fr auto;align-items:center;gap:13px}
+ .seekwrap{position:relative;padding:34px 0}
+ .seekwrap input[type=range]{position:relative;z-index:1}
+ .wing{position:absolute;transform:translateX(-50%);border:1px solid var(--accent);background:var(--panel);
+   color:var(--accent);border-radius:7px;height:28px;min-width:46px;padding:0 9px;font-size:11.5px;font-weight:700;
+   font-family:inherit;cursor:pointer;white-space:nowrap;z-index:2;line-height:26px}
+ .wing:hover{background:var(--accent);color:#fff}
+ .wing:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+ .wing.top{top:0}.wing.bot{bottom:0}
+ .wing.set{background:var(--accent);color:#fff}
+ .mk{position:absolute;width:2px;top:30px;bottom:30px;background:var(--accent);opacity:.55;z-index:0;display:none}
+ .mk.on{display:block}
+ .lbadge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--edge);border-radius:8px;
+   padding:5px 10px;font-size:12px;color:var(--muted);background:var(--row)}
+ .lbadge .n{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;border-radius:6px;
+   background:var(--accent);color:#fff;font-weight:800;font-size:12.5px;font-family:ui-monospace,Menlo,monospace}
+ .lbadge .nm{font-weight:650;color:var(--ink)}
  .play{width:50px;height:50px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;
    cursor:pointer;font-family:inherit}
  .play:disabled{opacity:.45;cursor:default}.play:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
@@ -93,15 +109,19 @@
  <div class="transport">
   <button class="play" id="play" disabled>Play</button>
   <span class="time" id="cur">0:00</span>
-  <input type="range" id="seek" min="0" max="100000" value="0" step="1" aria-label="Seek">
+  <div class="seekwrap">
+    <span class="mk" id="mkA"></span><span class="mk" id="mkB"></span>
+    <button class="wing top" id="wingA" title="Set loop start here">▲ A</button>
+    <input type="range" id="seek" min="0" max="100000" value="0" step="1" aria-label="Seek">
+    <button class="wing bot" id="wingB" title="Set loop end here">▼ B</button>
+  </div>
   <span class="time" id="dur">0:00</span></div>
  <div class="marks"><div class="mt">Loop a section</div>
   <div class="mg" style="align-items:center">
-   <button class="mb" id="setA"><b>Set A</b><span>start<span class="key">A</span></span></button>
-   <button class="mb" id="setB"><b>Set B</b><span>end<span class="key">B</span></span></button>
    <button class="tg" id="loopBtn" aria-pressed="false" style="height:34px">Loop<span class="key">O</span></button>
    <button class="mb" id="clrAB"><b>Clear</b><span>whole track</span></button>
    <span id="winTxt" style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)">whole track</span>
+   <span class="lbadge" id="lbadge"><span id="lstate">Playing</span><span class="n" id="lnum">1</span><span class="nm" id="lname"></span></span>
   </div></div>
  <div class="marks"><div class="mt">Jump to</div><div class="mg" id="marks"></div></div>
  <p class="hint"><b>Keys:</b> <span class="key">space</span> play/pause &nbsp;
@@ -115,7 +135,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791107835894;
+const EXPIRES=1791114395672;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -142,7 +162,10 @@ const B=k=>BUF[srcMode][k];
 TRACKS.forEach(t=>{const g=ctx.createGain();g.gain.value=0;g.connect(ctx.destination);G[t.key]=g;});
 function gainFor(t){return levelMatch?Math.pow(10,(TARGET-t.lufs)/20):1;}
 function applyGains(){const n=ctx.currentTime;
-  TRACKS.forEach(t=>G[t.key].gain.setTargetAtTime(t.key===active?gainFor(t):0,n,.008));}
+  TRACKS.forEach(t=>{const g=G[t.key];
+    try{g.gain.cancelScheduledValues(n);}catch(e){}      // drop any stale ramp before re-aiming
+    g.gain.setTargetAtTime(t.key===active?gainFor(t):0,n,.008);});
+  badge();}
 
 $("ab").innerHTML=TRACKS.map((t,i)=>`<button class="vb${t.key===active?" on":""}" data-k="${t.key}" aria-pressed="${t.key===active}">
   <span class="dot"></span><span><span class="vn">${t.name}<span class="key">${i+1}</span></span><span class="vs">${t.sub}</span></span>
@@ -151,7 +174,7 @@ $("marks").innerHTML=MARKS.map(m=>`<button class="mb" data-t="${m[0]}"><b>${m[1]
 
 function setActive(k){active=k;
   document.querySelectorAll(".vb").forEach(b=>{const on=b.dataset.k===k;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on);});
-  applyGains();const t=TRACKS.find(x=>x.key===k);$("say").textContent=t.name+" — "+t.sub;}
+  applyGains();const t=TRACKS.find(x=>x.key===k);$("say").textContent=t.name+" — "+t.sub;badge();}
 document.querySelectorAll(".vb").forEach(b=>b.onclick=()=>setActive(b.dataset.k));
 $("lvlBtn").onclick=()=>{levelMatch=!levelMatch;const b=$("lvlBtn");
   b.classList.toggle("on",levelMatch);b.textContent=levelMatch?"ON":"OFF";b.setAttribute("aria-pressed",levelMatch);
@@ -202,25 +225,39 @@ $("seek").oninput=e=>{dragging=true;$("cur").textContent=fmt(e.target.value/1000
 $("seek").onchange=e=>{dragging=false;seekTo(e.target.value/100000*dur);};
 document.querySelectorAll(".mb").forEach(b=>b.onclick=async()=>{unlockAudio();await ensure();
   const was=playing;seekTo(parseFloat(b.dataset.t));if(!was)startAll(offset);});
-function winTxt(){const t=$("winTxt");
+function badge(){const i=TRACKS.findIndex(t=>t.key===active); if(i<0)return;
+  const t=TRACKS[i];
+  $("lstate").textContent=loopOn?"Looping":"Playing";
+  $("lnum").textContent=String(i+1);
+  $("lnum").style.background="var(--"+t.key+")";
+  $("lname").textContent=t.name;
+  $("lbadge").style.borderColor=loopOn?"var(--"+t.key+")":"var(--edge)";}
+function wings(){const sw=$("seek"),pct=(+sw.value)/100000;
+  const w=sw.getBoundingClientRect().width||1, left=pct*w;
+  $("wingA").style.left=left+"px"; $("wingB").style.left=left+"px";
+  const pp=v=>((v/(dur||1))*w)+"px";
+  if(mA!=null){$("mkA").style.left=pp(mA);$("mkA").classList.add("on");}else $("mkA").classList.remove("on");
+  if(mB!=null){$("mkB").style.left=pp(mB);$("mkB").classList.add("on");}else $("mkB").classList.remove("on");
+  $("wingA").classList.toggle("set",mA!=null); $("wingB").classList.toggle("set",mB!=null);}
+function winTxt(){wings();badge();const t=$("winTxt");
   if(mA==null&&mB==null){t.textContent=loopOn?"whole track (looping)":"whole track";return;}
   t.textContent=fmt(winA())+" – "+fmt(winB())+(loopOn?"  ↻":"");}
 function reArm(){const was=playing;const p=pos();pauseAll();offset=p;if(was)startAll(offset);winTxt();}
-$("setA").onclick=()=>{mA=pos(); if(mB!=null&&mB<=mA)mB=null; reArm();
+$("wingA").onclick=()=>{mA=pos(); if(mB!=null&&mB<=mA)mB=null; reArm();
   $("say").textContent="Loop start "+fmt(winA());};
-$("setB").onclick=()=>{const p=pos(); if(p>winA()){mB=p;reArm();$("say").textContent="Loop end "+fmt(p);}};
+$("wingB").onclick=()=>{const p=pos(); if(p>winA()){mB=p;reArm();$("say").textContent="Loop end "+fmt(p);}};
 $("clrAB").onclick=()=>{mA=mB=null;reArm();$("say").textContent="Loop cleared";};
 $("loopBtn").onclick=()=>{loopOn=!loopOn;const b=$("loopBtn");
   b.classList.toggle("on",loopOn);b.setAttribute("aria-pressed",loopOn);
-  b.innerHTML='Loop<span class="key">O</span>';reArm();
+  b.innerHTML='Loop<span class="key">O</span>';reArm();badge();
   $("say").textContent="Loop "+(loopOn?"on":"off");};
 document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return;
   if(e.code==="Space"){e.preventDefault();$("play").click();}
   else if(e.key>="1"&&e.key<="6"){const t=TRACKS[+e.key-1];if(t)setActive(t.key);}
   else if(e.key==="l"||e.key==="L"){$("lvlBtn").click();}
   else if(e.key==="w"||e.key==="W"){setSrc(srcMode==="aac"?"wav":"aac");}
-  else if(e.key==="a"||e.key==="A"){$("setA").click();}
-  else if(e.key==="b"||e.key==="B"){$("setB").click();}
+  else if(e.key==="a"||e.key==="A"){$("wingA").click();}
+  else if(e.key==="b"||e.key==="B"){$("wingB").click();}
   else if(e.key==="o"||e.key==="O"){$("loopBtn").click();}
   else if(e.key==="ArrowLeft"){e.preventDefault();seekTo(pos()-5);}
   else if(e.key==="ArrowRight"){e.preventDefault();seekTo(pos()+5);}});
@@ -243,8 +280,9 @@ function expiry(){ if(!EXPIRES)return;
   const row=document.querySelector('.vb[data-k="'+t.key+'"] .vs');
   if(left<=0){dropTrack(t.key);$("say").textContent="Reference expired";return;}
   if(row)row.textContent=t.sub+" \u00b7 "+Math.ceil(left/60000)+" min left";}
-setInterval(expiry,5000); expiry(); winTxt();
+setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
+window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
-  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
+  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}wings();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>

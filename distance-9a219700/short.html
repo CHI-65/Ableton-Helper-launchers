@@ -1,4 +1,4 @@
-<!doctype html><meta charset="utf-8"><title>MasterMind v2.4 — Distance</title>
+<!doctype html><meta charset="utf-8"><title>MasterMind v2.5 — Distance</title>
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
@@ -171,7 +171,7 @@
 <div class="wrap"><main class="card">
  <div class="stale" id="stale"><span>A newer version is out — you are seeing a cached page.</span>
    <button id="reloadBtn">Reload</button></div>
- <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.4</span></div>
+ <div class="top"><div class="brand"><span class="nm">MasterMind</span><span class="ver">v2.5</span></div>
   <div class="eyebrow" style="margin:9px 0 8px"><span class="rec"></span>Master A/B · sample-synced</div>
   <h1>Distance — six masters</h1>
   <p class="lede">All three play in sync. Switching is instant and keeps your place, so you hear the
@@ -245,11 +245,11 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.5, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -17.3, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -17.2, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -17.0, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.9, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791133651668;
+const EXPIRES=1791133727449;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab120/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
-const VERSION="2.4";
+const VERSION="2.5";
 async function checkVer(){ try{
     const r=await fetch("version.txt?t="+Date.now(),{cache:"no-store"});
     if(!r.ok)return; const v=(await r.text()).trim();
@@ -572,22 +572,16 @@ function eqRead(i){const v=EQG[i];const e=$("ev"+i);
   e.textContent=(v>0?"+":"")+v.toFixed(1);
   e.parentElement.classList.toggle("act",Math.abs(v)>=0.05);}
 $("eqBands").addEventListener("input",e=>{ const i=+e.target.dataset.i; if(isNaN(i))return;
-  const v=(+e.target.value)/10; EQG[i]=v; glActive=false;
+  const v=(+e.target.value)/10; glActive=false;
   if(autoOn&&curReg>=0){REG[curReg].g[i]=v;drawRegs();}   // editing the region you are hearing
-  EQ[i].gain.cancelScheduledValues(ctx.currentTime);
-  EQ[i].gain.setTargetAtTime(v,ctx.currentTime,.01);
-  if(SOLO.has(i))soloGain(i);                       // audible while soloed
-  eqRead(i);});
+  setBand(i,v,true);});                                   // direct write; skip the element you are dragging
 $("eqBtn").onclick=()=>{const o=$("eqPanel").classList.toggle("open");
   $("eqBtn").classList.toggle("on",o);$("eqBtn").setAttribute("aria-expanded",o);
   $("eqBtn").innerHTML='G/EQ<span class="key">G</span>';};
 $("eqOn").onclick=()=>{eqOn=!eqOn;const b=$("eqOn");b.classList.toggle("on",eqOn);
   b.textContent=eqOn?"EQ ON":"EQ OFF";b.setAttribute("aria-pressed",eqOn);wireEQ();soloUI();engUI();
   $("say").textContent="EQ "+(eqOn?"on":"bypassed");};
-$("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{EQG[i]=0;
-  b.gain.cancelScheduledValues(ctx.currentTime); b.gain.setTargetAtTime(0,ctx.currentTime,.01);
-  if(SOLO.has(i))soloGain(i);
-  const el=$("eqBands").querySelector('input[data-i="'+i+'"]'); if(el)el.value=0; eqRead(i);});
+$("eqFlat").onclick=()=>{glActive=false;EQ.forEach((b,i)=>setBand(i,0));
   $("say").textContent="EQ flat";};
 $("eqCopy").onclick=async()=>{
   const nz=EQG.map((v,i)=>[FREQS[i],Math.round(v*10)/10]).filter(x=>Math.abs(x[1])>=0.05);

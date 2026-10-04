@@ -58,13 +58,13 @@
 </style>
 <div class="wrap"><main class="card">
  <div class="top"><div class="eyebrow"><span class="rec"></span>Piano balance · live</div>
-  <h1>Distance — piano balance &amp; stem solo</h1>
+  <h1>Distance — set the piano trim</h1>
   <p class="lede">Real MVSEP stems that reconstruct your original master to −69 dB. Move the fader while
    it plays and the piano changes instantly. When it sounds right, copy the number and send it to me —
    I'll build the master at exactly that value.</p></div>
- <div class="big"><div class="val"><span id="val">-7.5</span><span class="u">dB</span></div>
-  <div class="sub">piano, relative to your original master</div>
-  <input type="range" id="fader" min="-240" max="60" step="1" value="-75" aria-label="Piano level in dB">
+ <div class="big"><div class="val"><span id="val">-6.0</span><span class="u">dB</span></div>
+  <div class="sub">static trim on top of your automation (0 = as bounced)</div>
+  <input type="range" id="fader" min="-240" max="60" step="1" value="-60" aria-label="Piano level in dB">
  </div>
  <div class="pre" id="pre"></div>
  <div class="pre" style="border-top:1px solid var(--edge)">
@@ -100,7 +100,7 @@
   Piano and other are summed live, so this is exactly what a bounce at that setting would sound like.</p>
  <div class="sr" aria-live="polite" id="say"></div></main></div>
 <script>
-const ST={"other": null, "piano": null}, PRESETS=[[0.0, "OLD", "piano untouched"], [-8.0, "edit. 2", "what you had"], [-7.5, "target", "edit. 2 + 0.5"]];
+const ST={"other": null, "piano": null}, PRESETS=[[0.0, "AS BOUNCED", "your automation, no trim"], [-3.0, "-3 dB", ""], [-6.0, "-6 dB", "rough estimate"], [-9.0, "-9 dB", ""]];
 const _http=location.protocol.indexOf("http")===0;
 const BASE=_http?"stems/":"http://127.0.0.1:8777/stems/";
 const $=id=>document.getElementById(id);
@@ -211,7 +211,7 @@ function toggleSolo(i){SOLO.has(i)?SOLO.delete(i):SOLO.add(i);wireEQ();soloUI();
 $("eqOn").onclick=()=>{eqOn=!eqOn;$("eqOn").classList.toggle("on",eqOn);$("eqOn").textContent=eqOn?"ON":"OFF";wireEQ();};
 $("eqFlat").onclick=()=>{EQ.forEach((b,i)=>{setBand(i,0);if(BANDEL[i])BANDEL[i].value=0;});};
 FREQS.forEach((f,i)=>eqRead(i)); soloUI();
-$("copyB").onclick=async()=>{const t="Piano at "+(gainDb>0?"+":"")+gainDb.toFixed(1)+" dB relative to the original master"
+$("copyB").onclick=async()=>{const t="Piano trim "+(gainDb>0?"+":"")+gainDb.toFixed(1)+" dB on top of my automation"
   +((mA!=null||mB!=null)?" (judged over "+fmt(winA())+"–"+fmt(winB())+")":"");
   let ok=false; try{await navigator.clipboard.writeText(t);ok=true;}catch(e){}
   const b=$("copyB");b.textContent=ok?"Copied — paste it in chat":t;b.classList.toggle("done",ok);
@@ -229,7 +229,7 @@ Promise.all(["other","piano"].map(k=>(ST[k]?Promise.resolve(b64buf(ST[k]))
   :fetch(BASE+k+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
   .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF[k]=b;})))
  .then(()=>{dur=Math.min(BUF.other.duration,BUF.piano.duration);$("dur").textContent=fmt(dur);
-   $("play").disabled=false;$("loading").remove();setDb(-7.5);winTxt();stemUI();})
+   $("play").disabled=false;$("loading").remove();setDb(-6.0);winTxt();stemUI();})
  .catch(e=>{$("loading").textContent="load failed: "+e.message;});
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
   if(!drag){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}

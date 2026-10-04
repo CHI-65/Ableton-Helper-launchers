@@ -114,6 +114,12 @@
  .reg .del{color:var(--danger,#c0504d);border-color:transparent;font-size:15px;padding:2px 8px}
  .reg input[type=checkbox]{width:19px;height:19px;accent-color:var(--accent)}
  .mkr{position:absolute;top:30px;bottom:30px;background:var(--accent);opacity:.18;z-index:0;pointer-events:none}
+ .zoomrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:0 20px 10px}
+ .zb{border:1px solid var(--edge);background:transparent;color:var(--muted);border-radius:7px;padding:6px 10px;
+   font-size:11.5px;cursor:pointer;font-family:inherit;font-weight:600}
+ .zb:hover{border-color:var(--accent);color:var(--accent)}
+ .zb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+ .zlab{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--faint);margin-left:4px}
  .mk{position:absolute;width:2px;top:30px;bottom:30px;background:var(--accent);opacity:.55;z-index:0;display:none}
  .mk.on{display:block}
  .lbadge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--edge);border-radius:8px;
@@ -164,6 +170,11 @@
     <button class="wing bot" id="wingB" title="Set loop end here">▼ B</button>
   </div>
   <span class="time" id="dur">0:00</span></div>
+ <div class="zoomrow" id="zoomRow"><span class="mt" style="margin:0 4px 0 0">Zoom</span>
+   <button class="zb on" data-z="0">Full</button><button class="zb" data-z="60">60s</button>
+   <button class="zb" data-z="20">20s</button><button class="zb" data-z="8">8s</button>
+   <button class="zb" data-z="3">3s</button>
+   <button class="zb" id="zFit">Fit A–B</button><span class="zlab" id="zLab"></span></div>
  <div class="marks"><div class="mt">Loop a section</div>
   <div class="mg" style="align-items:center">
    <button class="tg" id="loopBtn" aria-pressed="false" style="height:34px">Loop<span class="key">O</span></button>
@@ -201,7 +212,7 @@
 <script>
 const TRACKS=[{"key": "old", "name": "ORIGINAL", "sub": "Distance Mix Final edit", "lufs": -12.1, "tp": "+0.28", "crest": "14.21", "loose": false, "b64": null}, {"key": "new", "name": "edit. 3", "sub": "piano ride, median \u22128.2 dB", "lufs": -16.6, "tp": "+0.10", "crest": "18.68", "loose": false, "b64": null}, {"key": "p5", "name": "edit (+.5)", "sub": "same ride, piano +0.76 dB", "lufs": -16.4, "tp": "+0.10", "crest": "18.57", "loose": false, "b64": null}, {"key": "p5ref", "name": "+.5 REF", "sub": "Culbertson tone \u00b7 dynamic", "lufs": -16.2, "tp": "-1.00", "crest": "17.31", "loose": false, "b64": null}, {"key": "p5loud", "name": "+.5 REF LOUD", "sub": "Culbertson tone \u00b7 your loudness", "lufs": -12.1, "tp": "-1.00", "crest": "13.26", "loose": false, "b64": null}, {"key": "reference", "name": "REFERENCE", "sub": "Culbertson \u2014 63 s, tone only", "lufs": -16.7, "tp": "-0.90", "crest": "17.31", "loose": true, "b64": null}], MARKS=[[52.5, "0:52", "piano-forward"], [79.5, "1:19", "biggest difference"], [90.5, "1:30", "piano-forward"], [157.0, "2:37", "dense section"], [178.0, "2:58", "loudest point"], [208.4, "3:28", "transient check"]], TARGET=-16.6;
 // served over http (any host, any device) -> relative. opened from disk -> fall back to the Mac.
-const EXPIRES=1791130015568;
+const EXPIRES=1791130163968;
 const _http=location.protocol.indexOf("http")===0;
 const WAVBASE=_http?"nowav/":"http://127.0.0.1:8777/wav/", AACBASE=_http?"ab/":"http://127.0.0.1:8777/ab/";
 const $=id=>document.getElementById(id);
@@ -224,6 +235,13 @@ let active="old",levelMatch=true,srcMode="aac",wavReady=false,wavBusy=false,wavU
 let sources=null,playing=false,offset=0,t0=0,dur=0,dragging=false;
 let mA=null,mB=null,loopOn=false;
 const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
+let viewLen=0, viewStart=0;                         // 0 = whole track
+const vLen=()=>viewLen>0?Math.min(viewLen,dur||1):(dur||1);
+function clampView(){ viewStart=Math.max(0,Math.min(viewStart,(dur||0)-vLen())); }
+const t2x=(t,w)=>((t-viewStart)/vLen())*w;
+const x2t=(x,w)=>viewStart+(x/(w||1))*vLen();
+function centreOn(t){ viewStart=t-vLen()/2; clampView(); }
+function zLab(){ $("zLab").textContent = viewLen>0 ? (fmt(viewStart)+" – "+fmt(viewStart+vLen())) : "whole track"; }
 const B=k=>BUF[srcMode][k];
 const FREQS=[25,31.5,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250,1600,2000,
              2500,3150,4000,5000,6300,8000,10000,12500,16000,20000];
@@ -313,8 +331,8 @@ async function ensure(){if(ctx.state==="suspended")await ctx.resume();}
 $("play").onclick=async()=>{unlockAudio();await ensure();playing?pauseAll():startAll(offset>=dur?0:offset);};
 function seekTo(s){const was=playing;pauseAll();offset=Math.max(0,Math.min(dur,s));
   $("cur").textContent=fmt(offset);$("seek").value=dur?offset/dur*100000:0;if(was)startAll(offset);}
-$("seek").oninput=e=>{dragging=true;$("cur").textContent=fmt(e.target.value/100000*dur);};
-$("seek").onchange=e=>{dragging=false;seekTo(e.target.value/100000*dur);};
+$("seek").oninput=e=>{dragging=true;$("cur").textContent=fmt(viewStart+(e.target.value/100000)*vLen());};
+$("seek").onchange=e=>{dragging=false;seekTo(viewStart+(e.target.value/100000)*vLen());};
 document.querySelectorAll(".mb").forEach(b=>b.onclick=async()=>{unlockAudio();await ensure();
   const was=playing;seekTo(parseFloat(b.dataset.t));if(!was)startAll(offset);});
 function badge(){const i=TRACKS.findIndex(t=>t.key===active); if(i<0)return;
@@ -326,12 +344,13 @@ function badge(){const i=TRACKS.findIndex(t=>t.key===active); if(i<0)return;
   $("lbadge").style.borderColor=loopOn?"var(--"+t.key+")":"var(--edge)";}
 function wings(){const sw=$("seek"),pct=(+sw.value)/100000;
   const w=sw.getBoundingClientRect().width||1, left=pct*w;
-  const pp=v=>((v/(dur||1))*w)+"px";
+  const pp=v=>t2x(v,w)+"px";
   if(loopOn){ $("wingA").style.left=pp(winA()); $("wingB").style.left=pp(winB()); }
   else { $("wingA").style.left=left+"px"; $("wingB").style.left=left+"px"; }
   $("wingA").classList.toggle("drag",loopOn); $("wingB").classList.toggle("drag",loopOn);
-  if(mA!=null){$("mkA").style.left=pp(mA);$("mkA").classList.add("on");}else $("mkA").classList.remove("on");
-  if(mB!=null){$("mkB").style.left=pp(mB);$("mkB").classList.add("on");}else $("mkB").classList.remove("on");
+  const vis=t=>t>=viewStart-0.01&&t<=viewStart+vLen()+0.01;
+  if(mA!=null&&vis(mA)){$("mkA").style.left=pp(mA);$("mkA").classList.add("on");}else $("mkA").classList.remove("on");
+  if(mB!=null&&vis(mB)){$("mkB").style.left=pp(mB);$("mkB").classList.add("on");}else $("mkB").classList.remove("on");
   $("wingA").classList.toggle("set",mA!=null); $("wingB").classList.toggle("set",mB!=null);}
 function liveLoop(){ if(!sources)return; const a=winA(),z=winB();
   sources.forEach(s=>{ if(!s||s._loose)return;
@@ -343,7 +362,7 @@ function dragWing(el,which){
     try{el.setPointerCapture(e.pointerId);}catch(_){} e.preventDefault(); },{passive:false});
   el.addEventListener("pointermove",e=>{ if(!on)return; moved=true;
     const r=$("seek").getBoundingClientRect();
-    let t=((e.clientX-r.left)/(r.width||1))*dur; t=Math.max(0,Math.min(dur,t));
+    let t=x2t(e.clientX-r.left,r.width); t=Math.max(0,Math.min(dur,t));
     if(which==="A") mA=Math.min(t,(mB!=null?mB:dur)-0.25);
     else            mB=Math.max(t,winA()+0.25);
     liveLoop(); wings(); winTxt(); },{passive:true});
@@ -381,7 +400,7 @@ Promise.all(TRACKS.map(t=>(t.b64?Promise.resolve(b64buf(t.b64))
    :fetch(AACBASE+t.key+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
    .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF.aac[t.key]=b;}).catch(e=>{dropTrack(t.key);})))
  .then(()=>{dur=Math.max(...TRACKS.filter(t=>!t.loose).map(t=>BUF.aac[t.key].duration));
-   $("dur").textContent=fmt(dur);$("play").disabled=false;$("loading").remove();
+   $("dur").textContent=fmt(dur);$("play").disabled=false;$("loading").remove();zLab();
    TRACKS.forEach(t=>t.b64=null);applyGains();srcUI();})
  .catch(e=>{$("loading").textContent="decode failed: "+e;});
 function dropTrack(k){const i=TRACKS.findIndex(t=>t.key===k); if(i<0)return;
@@ -436,7 +455,8 @@ function drawRegs(){
   const sw=$("seek").getBoundingClientRect().width||1;
   document.querySelectorAll(".mkr").forEach(e=>e.remove());
   if(autoOn)REG.filter(r=>r.on).forEach(r=>{const d=document.createElement("span");d.className="mkr";
-    d.style.left=((r.a/(dur||1))*sw)+"px";d.style.width=(((r.b-r.a)/(dur||1))*sw)+"px";
+    const x1=Math.max(0,t2x(r.a,sw)), x2=Math.min(sw,t2x(r.b,sw)); if(x2<=x1)return;
+    d.style.left=x1+"px";d.style.width=(x2-x1)+"px";
     $("seek").parentElement.appendChild(d);});}
 $("regAdd").onclick=()=>{ if(mA==null&&mB==null){$("say").textContent="Set A and B first";return;}
   REG.push({a:winA(),b:winB(),g:curveNow(),on:true}); REG.sort((x,y)=>x.a-y.a);
@@ -517,10 +537,24 @@ $("soloClr").onclick=()=>{SOLO.clear();wireEQ();soloUI();soloGainsAll();$("say")
     const inp=e.target.closest('input[type=range]'); if(!inp)return;
     if(e.key==="s"||e.key==="S"){e.preventDefault();toggleSolo(+inp.dataset.i);}});
 })();
-FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI(); engUI();
+$("zoomRow").addEventListener("click",e=>{
+  const b=e.target.closest(".zb"); if(!b)return;
+  if(b.id==="zFit"){ if(mA==null&&mB==null){$("say").textContent="Set A and B first";return;}
+    const a=winA(),z=winB(),pad=Math.max((z-a)*0.25,0.5);
+    viewLen=Math.min(dur,(z-a)+pad*2); viewStart=a-pad; clampView();
+    document.querySelectorAll(".zb").forEach(x=>x.classList.remove("on")); b.classList.add("on");
+  } else { viewLen=+b.dataset.z; centreOn(pos());
+    document.querySelectorAll(".zb").forEach(x=>x.classList.remove("on")); b.classList.add("on"); }
+  zLab(); wings(); drawRegs();
+  $("seek").value=dur?Math.max(0,Math.min(100000,((pos()-viewStart)/vLen())*100000)):0;
+  $("say").textContent=viewLen>0?("Zoom "+viewLen+" seconds"):"Zoom full track";});
+FREQS.forEach((f,i)=>eqRead(i)); drawRegs(); soloUI(); engUI(); zLab();
 setInterval(expiry,5000); expiry(); winTxt(); badge(); wings();
 window.addEventListener("resize",wings);
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
-  if(!dragging){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}wings();eqAuto();requestAnimationFrame(frame);}
+  if(!dragging){ $("cur").textContent=fmt(p);
+    if(viewLen>0&&playing&&(p<viewStart||p>viewStart+vLen())){centreOn(p);zLab();}
+    $("seek").value=dur?Math.max(0,Math.min(100000,((p-viewStart)/vLen())*100000)):0; }
+  wings();eqAuto();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>

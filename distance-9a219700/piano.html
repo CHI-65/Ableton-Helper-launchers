@@ -46,7 +46,7 @@
 </style>
 <div class="wrap"><main class="card">
  <div class="top"><div class="eyebrow"><span class="rec"></span>Piano balance · live</div>
-  <h1>Distance — set the piano by ear</h1>
+  <h1>Distance — piano balance &amp; stem solo</h1>
   <p class="lede">Real MVSEP stems that reconstruct your original master to −69 dB. Move the fader while
    it plays and the piano changes instantly. When it sounds right, copy the number and send it to me —
    I'll build the master at exactly that value.</p></div>
@@ -55,6 +55,17 @@
   <input type="range" id="fader" min="-240" max="60" step="1" value="-75" aria-label="Piano level in dB">
  </div>
  <div class="pre" id="pre"></div>
+ <div class="pre" style="border-top:1px solid var(--edge)">
+   <button class="pb on" id="sBoth"><b>BOTH</b><span>the mix</span></button>
+   <button class="pb" id="sPiano"><b>PIANO only</b><span>solo the stem</span></button>
+   <button class="pb" id="sOther"><b>OTHER only</b><span>everything else</span></button>
+ </div>
+ <div class="pre" style="border-top:1px solid var(--edge);gap:6px">
+   <button class="pb" data-j="47"><b>0:47</b><span>buzz window 1</span></button>
+   <button class="pb" data-j="50"><b>0:50</b><span></span></button>
+   <button class="pb" data-j="76"><b>1:16</b><span>buzz window 2</span></button>
+   <button class="pb" data-j="79"><b>1:19</b><span></span></button>
+ </div>
  <p class="loading" id="loading">decoding stems…</p>
  <div class="transport"><button class="play" id="play" disabled>Play</button>
   <span class="time" id="cur">0:00</span>
@@ -90,7 +101,14 @@ const BUF={},G={};
 let srcs=null,playing=false,offset=0,t0=0,dur=0,drag=false,gainDb=-7.5,mA=null,mB=null,loopOn=false;
 const winA=()=>mA!=null?mA:0, winB=()=>(mB!=null&&mB>winA())?mB:dur;
 ["other","piano"].forEach(k=>{const g=ctx.createGain();g.gain.value=1;g.connect(ctx.destination);G[k]=g;});
-function applyPiano(){G.piano.gain.setTargetAtTime(Math.pow(10,gainDb/20),ctx.currentTime,.01);}
+let stemMode="both";
+function applyPiano(){const n=ctx.currentTime;
+  const pv = stemMode==="other" ? 0 : Math.pow(10,gainDb/20);
+  const ov = stemMode==="piano" ? 0 : 1;
+  G.piano.gain.setTargetAtTime(pv,n,.01); G.other.gain.setTargetAtTime(ov,n,.01);}
+function stemUI(){["sBoth","sPiano","sOther"].forEach(id=>$(id).classList.remove("on"));
+  $(stemMode==="both"?"sBoth":stemMode==="piano"?"sPiano":"sOther").classList.add("on");
+  $("say").textContent = stemMode==="both"?"Both stems":stemMode==="piano"?"Piano stem only":"Other stem only";}
 function setDb(v,tag){gainDb=Math.max(-24,Math.min(6,v));
   $("val").textContent=(gainDb>0?"+":"")+gainDb.toFixed(1);
   $("fader").value=Math.round(gainDb*10); applyPiano();
@@ -98,7 +116,13 @@ function setDb(v,tag){gainDb=Math.max(-24,Math.min(6,v));
   if(tag)$("say").textContent="Piano "+gainDb.toFixed(1)+" dB";}
 $("fader").oninput=e=>setDb(parseInt(e.target.value)/10,1);
 $("pre").innerHTML=PRESETS.map(p=>`<button class="pb" data-v="${p[0]}"><b>${p[0]>0?"+":""}${p[0].toFixed(1)} dB</b><span>${p[1]} — ${p[2]}</span></button>`).join("");
-document.querySelectorAll(".pb").forEach(b=>b.onclick=()=>setDb(parseFloat(b.dataset.v),1));
+document.querySelectorAll(".pb[data-v]").forEach(b=>b.onclick=()=>setDb(parseFloat(b.dataset.v),1));
+document.querySelectorAll(".pb[data-j]").forEach(b=>b.onclick=async()=>{unlock();
+  if(ctx.state==="suspended")await ctx.resume();
+  const was=playing; seekTo(parseFloat(b.dataset.j)); if(!was)startAll(offset);});
+$("sBoth").onclick=()=>{stemMode="both";applyPiano();stemUI();};
+$("sPiano").onclick=()=>{stemMode="piano";applyPiano();stemUI();};
+$("sOther").onclick=()=>{stemMode="other";applyPiano();stemUI();};
 function pos(){if(!playing)return offset;const el=Math.max(0,ctx.currentTime-t0);
   if(loopOn){const a=winA(),z=winB(),L=z-a;if(L<=0)return offset;return a+(((offset-a)%L+L)%L+el)%L;}
   return Math.min(dur,offset+el);}
@@ -138,7 +162,7 @@ Promise.all(["other","piano"].map(k=>(ST[k]?Promise.resolve(b64buf(ST[k]))
   :fetch(BASE+k+".m4a").then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer();}))
   .then(a=>ctx.decodeAudioData(a)).then(b=>{BUF[k]=b;})))
  .then(()=>{dur=Math.min(BUF.other.duration,BUF.piano.duration);$("dur").textContent=fmt(dur);
-   $("play").disabled=false;$("loading").remove();setDb(-7.5);winTxt();})
+   $("play").disabled=false;$("loading").remove();setDb(-7.5);winTxt();stemUI();})
  .catch(e=>{$("loading").textContent="load failed: "+e.message;});
 function frame(){const p=pos();if(playing&&!loopOn&&p>=dur){pauseAll();offset=0;}
   if(!drag){$("cur").textContent=fmt(p);$("seek").value=dur?p/dur*100000:0;}requestAnimationFrame(frame);}
